@@ -60,6 +60,27 @@ npm run build:extension
 
 5. In VS Code extension host, run command `Multi-Agent: Start Task`.
 
+## One-Click Install (VS Code Installed Extension)
+
+If you want this extension installed like a normal VS Code plugin (not F5 extension host):
+
+1. Double-click:
+- `install-extension.bat`
+
+2. Or run command:
+
+```bash
+npm run install:extension
+```
+
+This will:
+- build extension
+- package `.vsix`
+- install to VS Code via `code --install-extension`
+
+After completion, restart VS Code and run command palette:
+- `Multi-Agent: Start Task`
+
 ## Notes
 
 - If no provider keys are configured, use `mock` agents in `AGENT_HUB_AGENTS_JSON`.

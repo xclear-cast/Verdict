@@ -11,7 +11,9 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test -w orchestrator",
     "dev:orchestrator": "npm run dev -w orchestrator",
-    "build:extension": "npm run build -w vscode-extension"
+    "build:extension": "npm run build -w vscode-extension",
+    "package:extension": "npm run package:vsix -w vscode-extension",
+    "install:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/install-extension.ps1"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

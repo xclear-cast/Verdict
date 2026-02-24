@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import path from "node:path";
 
 type DecisionAction = "approve_patch" | "reject_patch" | "retry_step";
 
@@ -82,6 +83,25 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 function getWorkspacePath(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+}
+
+async function resolveWorkspacePath(): Promise<string | undefined> {
+  const fromWorkspace = getWorkspacePath();
+  if (fromWorkspace) return fromWorkspace;
+
+  const activeEditorPath = vscode.window.activeTextEditor?.document?.uri.fsPath;
+  if (activeEditorPath) {
+    return path.dirname(activeEditorPath);
+  }
+
+  const picked = await vscode.window.showOpenDialog({
+    title: "Select workspace folder for Multi-Agent task",
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    openLabel: "Use this folder"
+  });
+  return picked?.[0]?.fsPath;
 }
 
 async function resolveTaskId(context: vscode.ExtensionContext): Promise<string | undefined> {
@@ -317,9 +337,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("multiAgent.startTask", async () => {
-      const workspacePath = getWorkspacePath();
+      const workspacePath = await resolveWorkspacePath();
       if (!workspacePath) {
-        vscode.window.showErrorMessage("Open a workspace folder first.");
+        vscode.window.showErrorMessage("Workspace folder is required. Select a folder and try again.");
         return;
       }
       const userGoal = await vscode.window.showInputBox({
