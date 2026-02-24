@@ -1,0 +1,64 @@
+{
+  "name": "multi-agent-debate",
+  "displayName": "Multi-Agent Debate",
+  "description": "Provider-agnostic multi-agent debate coding assistant for VS Code.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:multiAgent.startTask",
+    "onCommand:multiAgent.approvePatch",
+    "onCommand:multiAgent.rejectPatch",
+    "onCommand:multiAgent.showDebateLog",
+    "onCommand:multiAgent.retryStep"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "multiAgent.startTask",
+        "title": "Multi-Agent: Start Task"
+      },
+      {
+        "command": "multiAgent.approvePatch",
+        "title": "Multi-Agent: Approve Patch"
+      },
+      {
+        "command": "multiAgent.rejectPatch",
+        "title": "Multi-Agent: Reject Patch"
+      },
+      {
+        "command": "multiAgent.retryStep",
+        "title": "Multi-Agent: Retry Step"
+      },
+      {
+        "command": "multiAgent.showDebateLog",
+        "title": "Multi-Agent: Show Debate Log"
+      }
+    ],
+    "configuration": {
+      "title": "Multi-Agent Debate",
+      "properties": {
+        "multiAgent.orchestratorUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:3939",
+          "description": "Local orchestrator base URL."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json -w"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/vscode": "^1.97.0",
+    "typescript": "^5.8.2"
+  }
+}

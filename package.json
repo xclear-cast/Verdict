@@ -1,0 +1,20 @@
+{
+  "name": "agent-hub-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "orchestrator",
+    "vscode-extension"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test -w orchestrator",
+    "dev:orchestrator": "npm run dev -w orchestrator",
+    "build:extension": "npm run build -w vscode-extension"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}
