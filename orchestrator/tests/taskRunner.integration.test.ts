@@ -46,7 +46,8 @@ describe("TaskRunner integration", () => {
         maxRetriesPerStage: 1,
         consensusMode: "unanimous",
         quorumRatio: 1,
-        criticalOnlyInFinalRound: true
+        criticalOnlyInFinalRound: true,
+        enableUnanimousAutoFullAccess: true
       },
       budgetLimits: {
         maxStageExecutions: 5,

@@ -31,7 +31,7 @@ export function evaluatePatchSafety(
     const absolute = path.resolve(workspacePath, relativePath);
     const normalizedAbsolute = normalizeForMatch(absolute);
 
-    if (!normalizedAbsolute.toLowerCase().startsWith(normalizeForMatch(workspacePath).toLowerCase())) {
+    if (!policy.allowPathEscape && !normalizedAbsolute.toLowerCase().startsWith(normalizeForMatch(workspacePath).toLowerCase())) {
       return { blocked: true, reason: `path_escape_blocked:${relativePath}` };
     }
 

@@ -27,12 +27,14 @@ export interface DebatePolicy {
   consensusMode: ConsensusMode;
   quorumRatio: number;
   criticalOnlyInFinalRound: boolean;
+  enableUnanimousAutoFullAccess: boolean;
 }
 
 export interface ProtectionPolicy {
   protectedPathPatterns: string[];
   protectedTestPathPatterns: string[];
   allowTestChangesWithApproval: boolean;
+  allowPathEscape?: boolean;
 }
 
 export interface VerificationPolicy {

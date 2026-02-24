@@ -120,7 +120,8 @@ export const debatePolicySchema = z.object({
   maxRetriesPerStage: z.number().int().min(0).max(5).default(2),
   consensusMode: consensusModeSchema.default("unanimous"),
   quorumRatio: z.number().min(0.5).max(1).default(1),
-  criticalOnlyInFinalRound: z.boolean().default(true)
+  criticalOnlyInFinalRound: z.boolean().default(true),
+  enableUnanimousAutoFullAccess: z.boolean().default(true)
 });
 
 export const budgetLimitsSchema = z.object({
@@ -133,7 +134,8 @@ export const budgetLimitsSchema = z.object({
 export const protectionPolicySchema = z.object({
   protectedPathPatterns: z.array(z.string()).default([]),
   protectedTestPathPatterns: z.array(z.string()).default([]),
-  allowTestChangesWithApproval: z.boolean().default(false)
+  allowTestChangesWithApproval: z.boolean().default(false),
+  allowPathEscape: z.boolean().default(false)
 });
 
 export const verificationPolicySchema = z.object({

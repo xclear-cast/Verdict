@@ -2,6 +2,8 @@
 import path from "node:path";
 
 type DecisionAction = "approve_patch" | "reject_patch" | "retry_step";
+type AccessMode = "read_only" | "workspace" | "full_access";
+type FullAccessScope = "one_time" | "session";
 type SidebarAction =
   | "openStudio"
   | "refreshState"
@@ -48,6 +50,9 @@ interface StudioMessage {
   taskId?: string;
   action?: DecisionAction;
   note?: string;
+  accessMode?: AccessMode;
+  fullAccessScope?: FullAccessScope;
+  autoFullOnUnanimous?: boolean;
 }
 
 interface TaskBundle {
@@ -283,6 +288,13 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       }
       .help-title { font-weight: 700; margin-bottom: 8px; }
       .help-body { font-size: 12px; line-height: 1.45; white-space: pre-wrap; margin-bottom: 10px; opacity: 0.95; }
+      .details-card details { width: 100%; }
+      .details-card summary {
+        cursor: pointer;
+        list-style: none;
+      }
+      .details-card summary::-webkit-details-marker { display: none; }
+      .details-card[open], .details-card details[open] summary { margin-bottom: 8px; }
     </style>
   </head>
   <body>
@@ -302,8 +314,8 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       <div id="status" data-i18n="sidebar.status.ready">Ready</div>
     </div>
 
-    <div class="card">
-      <div class="title" data-i18n="sidebar.apiSettings">API Settings</div>
+    <details class="card details-card" id="apiSettingsDetails">
+      <summary class="title" data-i18n="sidebar.apiSettings">API Settings</summary>
       <input id="openAIKeyInput" type="password" data-i18n-placeholder="sidebar.placeholder.openai" placeholder="OpenAI API key (optional)" />
       <input id="anthropicKeyInput" type="password" data-i18n-placeholder="sidebar.placeholder.anthropic" placeholder="Anthropic API key (optional)" />
       <input id="geminiKeyInput" type="password" data-i18n-placeholder="sidebar.placeholder.gemini" placeholder="Google Gemini API key (optional)" />
@@ -311,10 +323,10 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       <div class="actions" style="margin-top:8px;">
         <button class="full" data-action="saveApiSettings" data-i18n="sidebar.button.saveApi">Save API Keys</button>
       </div>
-    </div>
+    </details>
 
-    <div class="card">
-      <div class="title" data-i18n="sidebar.debateBudget">Debate & Budget Settings</div>
+    <details class="card details-card" id="policySettingsDetails">
+      <summary class="title" data-i18n="sidebar.debateBudget">Debate & Budget Settings</summary>
       <div class="field">
         <div class="field-label"><span data-i18n="sidebar.label.maxDebateRounds">Max Debate Rounds</span> <button type="button" class="help-btn" data-help="maxDebateRounds">?</button></div>
         <input id="maxDebateRoundsInput" type="number" min="1" max="5" placeholder="2" />
@@ -360,7 +372,7 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       <div class="actions" style="margin-top:8px;">
         <button class="full" data-action="saveApiSettings" data-i18n="sidebar.button.saveDebate">Save Debate/Budget</button>
       </div>
-    </div>
+    </details>
 
     <div class="actions">
       <button class="full" data-action="openStudio" data-i18n="sidebar.button.openStudio">Open Studio</button>
@@ -1060,6 +1072,91 @@ function renderStudioHtml(
       .actions button {
         min-width: 120px;
       }
+      .quick-start {
+        border: 1px solid var(--vscode-editorWidget-border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: var(--vscode-sideBar-background);
+      }
+      .quick-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .quick-grid button {
+        min-height: 38px;
+      }
+      .access-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      .access-badge.read {
+        background: color-mix(in srgb, #78909c 24%, transparent);
+        border: 1px solid color-mix(in srgb, #78909c 50%, transparent);
+      }
+      .access-badge.workspace {
+        background: color-mix(in srgb, #0288d1 24%, transparent);
+        border: 1px solid color-mix(in srgb, #0288d1 50%, transparent);
+      }
+      .access-badge.full {
+        background: color-mix(in srgb, #e53935 30%, transparent);
+        border: 1px solid color-mix(in srgb, #e53935 55%, transparent);
+      }
+      .access-mode-wrap {
+        margin-top: 10px;
+        border: 1px solid var(--vscode-editorWidget-border);
+        border-radius: 8px;
+        padding: 8px;
+      }
+      .access-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .access-grid {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .access-grid button.active {
+        outline: 2px solid var(--vscode-focusBorder, #0e639c);
+        outline-offset: 0;
+      }
+      .access-scope {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .access-scope button.active {
+        outline: 2px solid var(--vscode-focusBorder, #0e639c);
+      }
+      .access-toggle-row {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .access-toggle-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+      }
+      .danger-note {
+        margin-top: 8px;
+        font-size: 11px;
+        color: var(--vscode-errorForeground, #f14c4c);
+      }
       .split {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1069,6 +1166,9 @@ function renderStudioHtml(
       @media (max-width: 980px) {
         .split { grid-template-columns: 1fr; }
         .summary-grid { grid-template-columns: 1fr; }
+        .quick-grid { grid-template-columns: 1fr; }
+        .access-grid { grid-template-columns: 1fr; }
+        .access-scope { grid-template-columns: 1fr; }
       }
       .panel {
         border: 1px solid var(--vscode-editorWidget-border);
@@ -1184,6 +1284,27 @@ function renderStudioHtml(
       .status-ok { color: #4caf50; }
       .status-warn { color: #ff9800; }
       .status-bad { color: #f44336; }
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      }
+      .modal-overlay.hidden { display: none; }
+      .modal-card {
+        width: min(520px, 92vw);
+        border: 1px solid var(--vscode-editorWidget-border);
+        border-radius: 10px;
+        background: var(--vscode-editor-background);
+        padding: 12px;
+      }
+      .modal-title { font-weight: 700; margin-bottom: 8px; }
+      .modal-body { font-size: 12px; line-height: 1.45; white-space: pre-wrap; margin-bottom: 8px; }
+      .modal-check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; }
+      .modal-countdown { margin-top: 8px; font-size: 12px; opacity: 0.9; }
     </style>
   </head>
   <body>
@@ -1206,6 +1327,7 @@ function renderStudioHtml(
           <div class="row"><b id="studioLblTurns">Turns:</b> <span id="turnCount">0</span></div>
           <div class="row"><b id="studioLblVerify">Verify:</b> <span id="verifyState">none</span></div>
           <div class="row"><b id="studioLblError">Error:</b> <span id="taskError">-</span></div>
+          <div class="row"><b id="studioLblAccess">Access:</b> <span id="accessModeBadge" class="access-badge workspace">WORKSPACE</span></div>
         </div>
       </div>
       <div class="actions">
@@ -1213,6 +1335,14 @@ function renderStudioHtml(
         <button id="showLogBtn">Open Log Window</button>
         <button id="studioLangToggleBtn">KO</button>
       </div>
+    </div>
+
+    <div class="quick-start">
+      <h3 id="studioQuickStartTitle">Quick Start</h3>
+      <div class="quick-grid">
+        <button id="quickNewBtn">1) Start New Task</button>
+      </div>
+      <div id="studioQuickHint" class="tiny-meta">Tip: open your project folder in VS Code, write goal below, then click Send.</div>
     </div>
 
     <div class="split">
@@ -1229,6 +1359,31 @@ function renderStudioHtml(
           <button id="rejectBtn">Reject</button>
           <button id="retryBtn">Retry</button>
         </div>
+        <div class="access-mode-wrap">
+          <div class="access-head">
+            <b id="studioAccessTitle">Access Mode</b>
+            <span id="accessCurrentText" class="tiny-meta">Workspace</span>
+          </div>
+          <div class="access-grid">
+            <button id="accessReadOnlyBtn">Read-Only</button>
+            <button id="accessWorkspaceBtn">Workspace</button>
+            <button id="accessFullBtn">Full Access</button>
+          </div>
+          <div class="access-scope">
+            <button id="scopeOneTimeBtn">One-time Full</button>
+            <button id="scopeSessionBtn">Session Full</button>
+          </div>
+          <div class="access-toggle-row">
+            <label class="access-toggle-label">
+              <input id="autoFullOnUnanimousInput" type="checkbox" checked />
+              <span id="autoFullOnUnanimousLabel">Unanimous -> Auto Full Access</span>
+            </label>
+            <span id="autoFullOnUnanimousState" class="tiny-meta">ON</span>
+          </div>
+          <div id="autoFullOnUnanimousHint" class="tiny-meta">If all agents approve a round, this stage temporarily escalates to Full Access.</div>
+          <div id="accessHintText" class="tiny-meta">Full Access can edit files outside workspace. One-time auto-downgrades after task start.</div>
+          <div id="accessDangerNote" class="danger-note"></div>
+        </div>
         <div id="studioLayoutHint" class="tiny-meta">Studio layout: left panel = commands/final summary, right panel = debate/events</div>
       </section>
 
@@ -1238,6 +1393,22 @@ function renderStudioHtml(
         <h4 id="studioEventLogTitle">Event Log</h4>
         <div id="eventLog" class="event-log"></div>
       </section>
+    </div>
+
+    <div id="fullAccessModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div id="fullAccessModalTitle" class="modal-title">Enable Full Access</div>
+        <div id="fullAccessModalBody" class="modal-body">Full Access may modify files outside current workspace. Use only if you trust this task goal.</div>
+        <label class="modal-check">
+          <input id="fullAccessAcknowledge" type="checkbox" />
+          <span id="fullAccessAcknowledgeText">I understand the risk and want to continue.</span>
+        </label>
+        <div id="fullAccessCountdown" class="modal-countdown">You can confirm in 10 seconds.</div>
+        <div class="actions" style="margin-top:10px;">
+          <button id="fullAccessConfirmBtn" disabled>Enable Full Access</button>
+          <button id="fullAccessCancelBtn">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <script nonce="${nonce}">
@@ -1283,16 +1454,32 @@ function renderStudioHtml(
           "studio.label.turns": "Turns:",
           "studio.label.verify": "Verify:",
           "studio.label.error": "Error:",
+          "studio.label.access": "Access:",
           "studio.button.refreshTask": "Refresh Task",
           "studio.button.openLog": "Open Log Window",
           "studio.button.send": "Send",
           "studio.button.approve": "Approve",
           "studio.button.reject": "Reject",
           "studio.button.retry": "Retry",
+          "studio.button.quickNew": "1) Start New Task",
+          "studio.button.accessReadOnly": "Read-Only",
+          "studio.button.accessWorkspace": "Workspace",
+          "studio.button.accessFull": "Full Access",
+          "studio.button.scopeOneTime": "One-time Full",
+          "studio.button.scopeSession": "Session Full",
+          "studio.button.modalEnableFull": "Enable Full Access",
+          "studio.button.modalCancel": "Cancel",
+          "studio.label.autoFullOnUnanimous": "Unanimous -> Auto Full Access",
           "studio.title.commandChat": "Command Chat",
           "studio.title.debateLive": "Debate Live",
           "studio.title.eventLog": "Event Log",
+          "studio.title.quickStart": "Quick Start",
+          "studio.title.accessMode": "Access Mode",
           "studio.meta.layout": "Studio layout: left panel = commands/final summary, right panel = debate/events",
+          "studio.meta.quickHint": "Tip: open your project folder in VS Code, write goal below, then click Send.",
+          "studio.meta.autoFullOnUnanimousHint":
+            "If all agents approve a round, this stage temporarily escalates to Full Access.",
+          "studio.meta.accessHint": "Full Access can edit files outside workspace. One-time auto-downgrades after task start.",
           "studio.placeholder.goal": "Example: Refactor login API and make all tests pass",
           "studio.placeholder.note": "Decision note (optional)",
           "studio.status.notSet": "not set",
@@ -1315,11 +1502,29 @@ function renderStudioHtml(
           "studio.conn.manual": "manual",
           "studio.conn.restore": "restore",
           "studio.conn.error": "error",
+          "studio.toggle.on": "ON",
+          "studio.toggle.off": "OFF",
+          "studio.access.read_only": "READ-ONLY",
+          "studio.access.workspace": "WORKSPACE",
+          "studio.access.full_access": "FULL ACCESS",
+          "studio.modal.full.title": "Enable Full Access",
+          "studio.modal.full.body": "Full Access may modify files outside current workspace. Use only if you trust this task goal.",
+          "studio.modal.full.ack": "I understand the risk and want to continue.",
+          "studio.modal.full.countdown": "You can confirm in {seconds} seconds.",
           "studio.msg.reconnected": "Reconnected to existing task: ",
           "studio.msg.startPrompt": "Type your goal in Command Chat and click Send to start.",
           "studio.msg.taskStarted": "Task started: ",
           "studio.msg.goal": "Goal: ",
-          "studio.msg.errorPrefix": "Error: "
+          "studio.msg.errorPrefix": "Error: ",
+          "studio.msg.quickPrompt": "Step 1: type your goal below, then click Send.",
+          "studio.msg.accessChanged": "Access mode changed to ",
+          "studio.msg.accessAutoDowngrade": "Full Access auto-downgraded to Workspace due to inactivity.",
+          "studio.msg.accessOneTimeUsed": "One-time Full Access consumed; mode returned to Workspace.",
+          "studio.msg.accessTaskEnded": "Task ended; Full Access reverted to Workspace.",
+          "studio.msg.autoFullToggleOn": "Unanimous auto Full Access enabled.",
+          "studio.msg.autoFullToggleOff": "Unanimous auto Full Access disabled.",
+          "studio.msg.autoFullApplied":
+            "Unanimous consensus reached at {stage}; temporary Full Access applied for this stage."
         },
         ko: {
           "studio.label.task": "작업:",
@@ -1334,16 +1539,32 @@ function renderStudioHtml(
           "studio.label.turns": "턴:",
           "studio.label.verify": "검증:",
           "studio.label.error": "오류:",
+          "studio.label.access": "권한:",
           "studio.button.refreshTask": "작업 새로고침",
           "studio.button.openLog": "로그 창 열기",
           "studio.button.send": "보내기",
           "studio.button.approve": "승인",
           "studio.button.reject": "거절",
           "studio.button.retry": "재시도",
+          "studio.button.quickNew": "1) 새 작업 시작",
+          "studio.button.accessReadOnly": "읽기 전용",
+          "studio.button.accessWorkspace": "워크스페이스",
+          "studio.button.accessFull": "풀 액세스",
+          "studio.button.scopeOneTime": "1회성 풀권한",
+          "studio.button.scopeSession": "세션 풀권한",
+          "studio.button.modalEnableFull": "풀 액세스 활성화",
+          "studio.button.modalCancel": "취소",
+          "studio.label.autoFullOnUnanimous": "만장일치 시 자동 풀 액세스",
           "studio.title.commandChat": "명령 채팅",
           "studio.title.debateLive": "실시간 토론",
           "studio.title.eventLog": "이벤트 로그",
+          "studio.title.quickStart": "빠른 시작",
+          "studio.title.accessMode": "권한 모드",
           "studio.meta.layout": "스튜디오 구성: 왼쪽=명령/최종결론, 오른쪽=토론/이벤트",
+          "studio.meta.quickHint": "팁: VS Code에서 프로젝트 폴더를 열고, 아래 목표를 입력한 뒤 Send를 누르세요.",
+          "studio.meta.autoFullOnUnanimousHint":
+            "한 라운드에서 모든 에이전트가 승인하면 해당 단계에 한해 풀 액세스로 임시 승격됩니다.",
+          "studio.meta.accessHint": "풀 액세스는 워크스페이스 밖 파일도 수정할 수 있습니다. 1회성은 작업 시작 후 자동 복귀됩니다.",
           "studio.placeholder.goal": "예) 로그인 API 리팩터링하고 테스트까지 통과시켜줘",
           "studio.placeholder.note": "의사결정 메모 (선택)",
           "studio.status.notSet": "미설정",
@@ -1366,11 +1587,29 @@ function renderStudioHtml(
           "studio.conn.manual": "수동",
           "studio.conn.restore": "복원",
           "studio.conn.error": "오류",
+          "studio.toggle.on": "켜짐",
+          "studio.toggle.off": "꺼짐",
+          "studio.access.read_only": "읽기 전용",
+          "studio.access.workspace": "워크스페이스",
+          "studio.access.full_access": "풀 액세스",
+          "studio.modal.full.title": "풀 액세스 활성화",
+          "studio.modal.full.body": "풀 액세스는 현재 워크스페이스 밖 파일도 수정할 수 있습니다. 신뢰 가능한 작업에서만 사용하세요.",
+          "studio.modal.full.ack": "위험을 이해했고 계속 진행합니다.",
+          "studio.modal.full.countdown": "{seconds}초 후 확인 버튼이 활성화됩니다.",
           "studio.msg.reconnected": "기존 작업에 다시 연결됨: ",
           "studio.msg.startPrompt": "왼쪽 Command Chat에 목표를 입력하고 Send를 누르세요.",
           "studio.msg.taskStarted": "작업 시작: ",
           "studio.msg.goal": "목표: ",
-          "studio.msg.errorPrefix": "오류: "
+          "studio.msg.errorPrefix": "오류: ",
+          "studio.msg.quickPrompt": "1단계: 아래에 목표를 입력한 뒤 Send를 누르세요.",
+          "studio.msg.accessChanged": "권한 모드 변경: ",
+          "studio.msg.accessAutoDowngrade": "비활성 상태로 인해 풀 액세스가 워크스페이스 모드로 자동 전환되었습니다.",
+          "studio.msg.accessOneTimeUsed": "1회성 풀 액세스를 사용하여 워크스페이스 모드로 복귀했습니다.",
+          "studio.msg.accessTaskEnded": "작업 종료로 풀 액세스가 워크스페이스 모드로 복귀했습니다.",
+          "studio.msg.autoFullToggleOn": "만장일치 자동 풀 액세스가 켜졌습니다.",
+          "studio.msg.autoFullToggleOff": "만장일치 자동 풀 액세스가 꺼졌습니다.",
+          "studio.msg.autoFullApplied":
+            "{stage} 단계에서 만장일치가 성립되어 해당 단계에 풀 액세스가 임시 적용되었습니다."
         }
       };
 
@@ -1379,9 +1618,186 @@ function renderStudioHtml(
         return table[key] || i18n.en[key] || key;
       }
 
+      function tf(key, values) {
+        const template = t(key);
+        if (!values || typeof values !== "object") return template;
+        return Object.entries(values).reduce((text, [name, value]) => {
+          return text.replaceAll("{" + name + "}", String(value));
+        }, template);
+      }
+
       function connText(reason) {
         if (!reason) return t("studio.conn.updated");
         return t("studio.conn." + reason) || reason;
+      }
+
+      const accessStorageKey = "multiAgent.studio.access_mode_state";
+      const FULL_ACCESS_IDLE_MS = 10 * 60 * 1000;
+      const FULL_ACCESS_CONFIRM_SECONDS = 10;
+
+      let accessMode = "workspace";
+      let fullAccessScope = "one_time";
+      let autoFullOnUnanimous = true;
+      let consumeOneTimeFullAccessOnStart = false;
+      let lastUserActivityAt = Date.now();
+      let accessIdleInterval = null;
+      let fullAccessCountdownInterval = null;
+      let fullAccessCountdownRemain = FULL_ACCESS_CONFIRM_SECONDS;
+
+      try {
+        const raw = localStorage.getItem(accessStorageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && (parsed.accessMode === "read_only" || parsed.accessMode === "workspace" || parsed.accessMode === "full_access")) {
+            accessMode = parsed.accessMode;
+          }
+          if (parsed && (parsed.fullAccessScope === "one_time" || parsed.fullAccessScope === "session")) {
+            fullAccessScope = parsed.fullAccessScope;
+          }
+          if (parsed && typeof parsed.autoFullOnUnanimous === "boolean") {
+            autoFullOnUnanimous = parsed.autoFullOnUnanimous;
+          }
+        }
+      } catch {}
+
+      function persistAccessState() {
+        try {
+          localStorage.setItem(
+            accessStorageKey,
+            JSON.stringify({
+              accessMode,
+              fullAccessScope,
+              autoFullOnUnanimous
+            })
+          );
+        } catch {}
+      }
+
+      function accessClass(mode) {
+        if (mode === "read_only") return "read";
+        if (mode === "full_access") return "full";
+        return "workspace";
+      }
+
+      function syncFullModalCountdown() {
+        const countdownEl = byId("fullAccessCountdown");
+        if (countdownEl) {
+          countdownEl.textContent = tf("studio.modal.full.countdown", { seconds: fullAccessCountdownRemain });
+        }
+      }
+
+      function updateAccessUi() {
+        const badge = byId("accessModeBadge");
+        if (badge) {
+          badge.textContent = t("studio.access." + accessMode);
+          badge.classList.remove("read", "workspace", "full");
+          badge.classList.add(accessClass(accessMode));
+        }
+
+        setText("accessCurrentText", t("studio.access." + accessMode));
+
+        const readBtn = byId("accessReadOnlyBtn");
+        const workspaceBtn = byId("accessWorkspaceBtn");
+        const fullBtn = byId("accessFullBtn");
+        if (readBtn) readBtn.classList.toggle("active", accessMode === "read_only");
+        if (workspaceBtn) workspaceBtn.classList.toggle("active", accessMode === "workspace");
+        if (fullBtn) fullBtn.classList.toggle("active", accessMode === "full_access");
+
+        const scopeOneBtn = byId("scopeOneTimeBtn");
+        const scopeSessionBtn = byId("scopeSessionBtn");
+        if (scopeOneBtn) scopeOneBtn.classList.toggle("active", fullAccessScope === "one_time");
+        if (scopeSessionBtn) scopeSessionBtn.classList.toggle("active", fullAccessScope === "session");
+
+        const autoFullInput = byId("autoFullOnUnanimousInput");
+        if (autoFullInput && "checked" in autoFullInput) {
+          autoFullInput.checked = autoFullOnUnanimous;
+        }
+        setText("autoFullOnUnanimousState", autoFullOnUnanimous ? t("studio.toggle.on") : t("studio.toggle.off"));
+
+        const dangerNote = byId("accessDangerNote");
+        if (dangerNote) {
+          dangerNote.textContent = accessMode === "full_access" ? t("studio.modal.full.body") : "";
+        }
+      }
+
+      function startIdleMonitor() {
+        if (accessIdleInterval) {
+          clearInterval(accessIdleInterval);
+        }
+        accessIdleInterval = setInterval(() => {
+          if (accessMode !== "full_access" || fullAccessScope !== "session") return;
+          if (Date.now() - lastUserActivityAt < FULL_ACCESS_IDLE_MS) return;
+          setAccessMode("workspace", true, t("studio.msg.accessAutoDowngrade"));
+        }, 15000);
+      }
+
+      function stopIdleMonitor() {
+        if (accessIdleInterval) {
+          clearInterval(accessIdleInterval);
+          accessIdleInterval = null;
+        }
+      }
+
+      function setAccessMode(nextMode, notify, note) {
+        accessMode = nextMode;
+        persistAccessState();
+        updateAccessUi();
+        if (accessMode === "full_access" && fullAccessScope === "session") {
+          startIdleMonitor();
+        } else {
+          stopIdleMonitor();
+        }
+        if (notify) {
+          const text = note || (t("studio.msg.accessChanged") + t("studio.access." + nextMode));
+          addEvent("access", text);
+          addChat("assistant", text);
+        }
+      }
+
+      function closeFullAccessModal() {
+        const modal = byId("fullAccessModal");
+        if (modal) {
+          modal.classList.add("hidden");
+        }
+        if (fullAccessCountdownInterval) {
+          clearInterval(fullAccessCountdownInterval);
+          fullAccessCountdownInterval = null;
+        }
+      }
+
+      function refreshFullAccessConfirmEnabled() {
+        const confirmBtn = byId("fullAccessConfirmBtn");
+        const ackEl = byId("fullAccessAcknowledge");
+        const acknowledged = Boolean(ackEl && "checked" in ackEl && ackEl.checked);
+        if (confirmBtn) {
+          confirmBtn.disabled = !acknowledged || fullAccessCountdownRemain > 0;
+        }
+      }
+
+      function openFullAccessModal() {
+        const modal = byId("fullAccessModal");
+        const ackEl = byId("fullAccessAcknowledge");
+        if (!modal || !ackEl) return;
+
+        fullAccessCountdownRemain = FULL_ACCESS_CONFIRM_SECONDS;
+        ackEl.checked = false;
+        syncFullModalCountdown();
+        refreshFullAccessConfirmEnabled();
+        modal.classList.remove("hidden");
+
+        if (fullAccessCountdownInterval) {
+          clearInterval(fullAccessCountdownInterval);
+        }
+        fullAccessCountdownInterval = setInterval(() => {
+          fullAccessCountdownRemain -= 1;
+          if (fullAccessCountdownRemain <= 0) {
+            fullAccessCountdownRemain = 0;
+            clearInterval(fullAccessCountdownInterval);
+            fullAccessCountdownInterval = null;
+          }
+          syncFullModalCountdown();
+          refreshFullAccessConfirmEnabled();
+        }, 1000);
       }
 
       function applyLocale() {
@@ -1397,16 +1813,35 @@ function renderStudioHtml(
         setText("studioLblTurns", t("studio.label.turns"));
         setText("studioLblVerify", t("studio.label.verify"));
         setText("studioLblError", t("studio.label.error"));
+        setText("studioLblAccess", t("studio.label.access"));
         setText("refreshTaskBtn", t("studio.button.refreshTask"));
         setText("showLogBtn", t("studio.button.openLog"));
         setText("sendBtn", t("studio.button.send"));
         setText("approveBtn", t("studio.button.approve"));
         setText("rejectBtn", t("studio.button.reject"));
         setText("retryBtn", t("studio.button.retry"));
+        setText("quickNewBtn", t("studio.button.quickNew"));
+        setText("accessReadOnlyBtn", t("studio.button.accessReadOnly"));
+        setText("accessWorkspaceBtn", t("studio.button.accessWorkspace"));
+        setText("accessFullBtn", t("studio.button.accessFull"));
+        setText("scopeOneTimeBtn", t("studio.button.scopeOneTime"));
+        setText("scopeSessionBtn", t("studio.button.scopeSession"));
+        setText("autoFullOnUnanimousLabel", t("studio.label.autoFullOnUnanimous"));
+        setText("autoFullOnUnanimousHint", t("studio.meta.autoFullOnUnanimousHint"));
+        setText("fullAccessConfirmBtn", t("studio.button.modalEnableFull"));
+        setText("fullAccessCancelBtn", t("studio.button.modalCancel"));
         setText("studioCommandChatTitle", t("studio.title.commandChat"));
         setText("studioDebateLiveTitle", t("studio.title.debateLive"));
         setText("studioEventLogTitle", t("studio.title.eventLog"));
+        setText("studioQuickStartTitle", t("studio.title.quickStart"));
+        setText("studioAccessTitle", t("studio.title.accessMode"));
         setText("studioLayoutHint", t("studio.meta.layout"));
+        setText("studioQuickHint", t("studio.meta.quickHint"));
+        setText("accessHintText", t("studio.meta.accessHint"));
+        setText("fullAccessModalTitle", t("studio.modal.full.title"));
+        setText("fullAccessModalBody", t("studio.modal.full.body"));
+        setText("fullAccessAcknowledgeText", t("studio.modal.full.ack"));
+        syncFullModalCountdown();
 
         const langButton = byId("studioLangToggleBtn");
         if (langButton) {
@@ -1431,6 +1866,8 @@ function renderStudioHtml(
         if (connectionStateEl && (connectionStateEl.textContent === "idle" || connectionStateEl.textContent === "대기")) {
           connectionStateEl.textContent = t("studio.status.idle");
         }
+
+        updateAccessUi();
       }
 
       function byId(id) {
@@ -1550,6 +1987,9 @@ function renderStudioHtml(
           const finalMessage = summarizeOutcome(bundle);
           addChat("assistant", finalMessage);
           addEvent("final", finalMessage);
+          if (accessMode === "full_access") {
+            setAccessMode("workspace", true, t("studio.msg.accessTaskEnded"));
+          }
         }
       }
 
@@ -1614,6 +2054,17 @@ function renderStudioHtml(
             const stage = payload && payload.stage ? " stage=" + payload.stage : "";
             const detail = payload && payload.data ? " " + JSON.stringify(payload.data) : "";
             addEvent(eventName, stage + detail);
+            if (
+              eventName === "stage_completed" &&
+              payload &&
+              payload.data &&
+              payload.data.autoFullAccessByUnanimous === true
+            ) {
+              const stageName = payload.stage ? String(payload.stage) : "-";
+              const notice = tf("studio.msg.autoFullApplied", { stage: stageName });
+              addEvent("policy", notice);
+              addChat("assistant", notice);
+            }
             queueRefresh("live");
           });
         }
@@ -1641,7 +2092,41 @@ function renderStudioHtml(
         addChat("user", goal);
         if (goalInput) goalInput.value = "";
         setText("connectionState", t("studio.conn.starting"));
-        vscode.postMessage({ command: "startTask", userGoal: goal });
+        consumeOneTimeFullAccessOnStart = accessMode === "full_access" && fullAccessScope === "one_time";
+        vscode.postMessage({
+          command: "startTask",
+          userGoal: goal,
+          accessMode: accessMode,
+          fullAccessScope: fullAccessScope,
+          autoFullOnUnanimous: autoFullOnUnanimous
+        });
+      }
+
+      function onQuickNew() {
+        const goalInput = byId("goalInput");
+        if (goalInput && goalInput.value && goalInput.value.trim()) {
+          onStart();
+          return;
+        }
+        if (goalInput) {
+          goalInput.focus();
+        }
+        addChat("assistant", t("studio.msg.quickPrompt"));
+      }
+
+      function onSelectScope(scope) {
+        fullAccessScope = scope === "session" ? "session" : "one_time";
+        persistAccessState();
+        updateAccessUi();
+        if (accessMode === "full_access" && fullAccessScope === "session") {
+          startIdleMonitor();
+        } else {
+          stopIdleMonitor();
+        }
+      }
+
+      function onRequestFullAccess() {
+        openFullAccessModal();
       }
 
       function onDecision(action) {
@@ -1674,6 +2159,10 @@ function renderStudioHtml(
           if (msg.source === "start") {
             const goal = msg.bundle.request && msg.bundle.request.userGoal ? msg.bundle.request.userGoal : "";
             addChat("assistant", t("studio.msg.taskStarted") + state.taskId + (goal ? "\\n" + t("studio.msg.goal") + goal : ""));
+            if (consumeOneTimeFullAccessOnStart) {
+              consumeOneTimeFullAccessOnStart = false;
+              setAccessMode("workspace", true, t("studio.msg.accessOneTimeUsed"));
+            }
           }
           return;
         }
@@ -1713,6 +2202,79 @@ function renderStudioHtml(
       if (showLogBtn) {
         showLogBtn.addEventListener("click", () => vscode.postMessage({ command: "openDebateLog", taskId: state.taskId }));
       }
+      const quickNewBtn = byId("quickNewBtn");
+      if (quickNewBtn) {
+        quickNewBtn.addEventListener("click", onQuickNew);
+      }
+
+      const accessReadOnlyBtn = byId("accessReadOnlyBtn");
+      if (accessReadOnlyBtn) {
+        accessReadOnlyBtn.addEventListener("click", () => {
+          setAccessMode("read_only", true);
+        });
+      }
+      const accessWorkspaceBtn = byId("accessWorkspaceBtn");
+      if (accessWorkspaceBtn) {
+        accessWorkspaceBtn.addEventListener("click", () => {
+          setAccessMode("workspace", true);
+        });
+      }
+      const accessFullBtn = byId("accessFullBtn");
+      if (accessFullBtn) {
+        accessFullBtn.addEventListener("click", onRequestFullAccess);
+      }
+
+      const scopeOneTimeBtn = byId("scopeOneTimeBtn");
+      if (scopeOneTimeBtn) {
+        scopeOneTimeBtn.addEventListener("click", () => onSelectScope("one_time"));
+      }
+      const scopeSessionBtn = byId("scopeSessionBtn");
+      if (scopeSessionBtn) {
+        scopeSessionBtn.addEventListener("click", () => onSelectScope("session"));
+      }
+      const autoFullOnUnanimousInput = byId("autoFullOnUnanimousInput");
+      if (autoFullOnUnanimousInput && "checked" in autoFullOnUnanimousInput) {
+        autoFullOnUnanimousInput.addEventListener("change", () => {
+          autoFullOnUnanimous = Boolean(autoFullOnUnanimousInput.checked);
+          persistAccessState();
+          updateAccessUi();
+          const note = autoFullOnUnanimous ? t("studio.msg.autoFullToggleOn") : t("studio.msg.autoFullToggleOff");
+          addEvent("policy", note);
+          addChat("assistant", note);
+        });
+      }
+
+      const fullAccessAcknowledge = byId("fullAccessAcknowledge");
+      if (fullAccessAcknowledge) {
+        fullAccessAcknowledge.addEventListener("change", () => refreshFullAccessConfirmEnabled());
+      }
+      const fullAccessConfirmBtn = byId("fullAccessConfirmBtn");
+      if (fullAccessConfirmBtn) {
+        fullAccessConfirmBtn.addEventListener("click", () => {
+          setAccessMode("full_access", true);
+          closeFullAccessModal();
+        });
+      }
+      const fullAccessCancelBtn = byId("fullAccessCancelBtn");
+      if (fullAccessCancelBtn) {
+        fullAccessCancelBtn.addEventListener("click", closeFullAccessModal);
+      }
+      const fullAccessModal = byId("fullAccessModal");
+      if (fullAccessModal) {
+        fullAccessModal.addEventListener("click", (event) => {
+          if (event.target === fullAccessModal) {
+            closeFullAccessModal();
+          }
+        });
+      }
+
+      const markUserActivity = () => {
+        lastUserActivityAt = Date.now();
+      };
+      document.addEventListener("click", markUserActivity, { passive: true });
+      document.addEventListener("keydown", markUserActivity, { passive: true });
+      document.addEventListener("mousemove", markUserActivity, { passive: true });
+
       const studioLangToggleBtn = byId("studioLangToggleBtn");
       if (studioLangToggleBtn) {
         studioLangToggleBtn.addEventListener("click", () => {
@@ -1730,9 +2292,12 @@ function renderStudioHtml(
 
       window.addEventListener("beforeunload", () => {
         disconnectEvents();
+        closeFullAccessModal();
+        stopIdleMonitor();
       });
 
       applyLocale();
+      setAccessMode(accessMode, false);
       setRuntimeStatus();
       if (state.taskId) {
         addChat("assistant", t("studio.msg.reconnected") + state.taskId);
@@ -1834,6 +2399,8 @@ export function activate(context: vscode.ExtensionContext) {
               return;
             }
 
+            const accessMode: AccessMode = message.accessMode ?? "workspace";
+
             const workspacePath = await resolveWorkspacePath();
             if (!workspacePath) {
               panel.webview.postMessage({
@@ -1844,14 +2411,50 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             try {
+              const taskPayload: {
+                workspacePath: string;
+                userGoal: string;
+                debatePolicy?: {
+                  enableUnanimousAutoFullAccess: boolean;
+                };
+                protectionPolicy?: {
+                  protectedPathPatterns: string[];
+                  protectedTestPathPatterns: string[];
+                  allowTestChangesWithApproval: boolean;
+                  allowPathEscape: boolean;
+                };
+              } = { workspacePath, userGoal };
+
+              taskPayload.debatePolicy = {
+                enableUnanimousAutoFullAccess: message.autoFullOnUnanimous !== false
+              };
+
+              if (accessMode === "read_only") {
+                taskPayload.protectionPolicy = {
+                  protectedPathPatterns: ["**/*"],
+                  protectedTestPathPatterns: ["**/*"],
+                  allowTestChangesWithApproval: false,
+                  allowPathEscape: false
+                };
+              } else if (accessMode === "full_access") {
+                taskPayload.protectionPolicy = {
+                  protectedPathPatterns: [],
+                  protectedTestPathPatterns: [],
+                  allowTestChangesWithApproval: true,
+                  allowPathEscape: true
+                };
+              }
+
               const bundle = await fetchJson<TaskBundle>(`${getOrchestratorUrl()}/tasks`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ workspacePath, userGoal })
+                body: JSON.stringify(taskPayload)
               });
               await context.globalState.update(LAST_TASK_KEY, bundle.task.id);
               panel.webview.postMessage({ type: "taskBundle", source: "start", bundle });
-              output.appendLine(`[studio.startTask] taskId=${bundle.task.id}`);
+              output.appendLine(
+                `[studio.startTask] taskId=${bundle.task.id} accessMode=${accessMode} fullAccessScope=${message.fullAccessScope ?? "n/a"} autoFullOnUnanimous=${message.autoFullOnUnanimous !== false}`
+              );
               sidebarProvider.refresh();
             } catch (error) {
               const text = error instanceof Error ? error.message : String(error);

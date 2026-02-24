@@ -22,7 +22,8 @@ const defaultDebatePolicy: DebatePolicy = {
   maxRetriesPerStage: 2,
   consensusMode: "unanimous",
   quorumRatio: 1,
-  criticalOnlyInFinalRound: true
+  criticalOnlyInFinalRound: true,
+  enableUnanimousAutoFullAccess: true
 };
 
 const defaultProtectionPolicy: ProtectionPolicy = {
@@ -35,7 +36,8 @@ const defaultProtectionPolicy: ProtectionPolicy = {
     "**/deploy/**"
   ],
   protectedTestPathPatterns: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**"],
-  allowTestChangesWithApproval: false
+  allowTestChangesWithApproval: false,
+  allowPathEscape: false
 };
 
 const defaultVerificationPolicy: VerificationPolicy = {
@@ -90,6 +92,10 @@ function resolveDebatePolicyDefaults(): DebatePolicy {
     criticalOnlyInFinalRound: parseBooleanEnv(
       "AGENT_HUB_CRITICAL_ONLY_IN_FINAL_ROUND",
       defaultDebatePolicy.criticalOnlyInFinalRound
+    ),
+    enableUnanimousAutoFullAccess: parseBooleanEnv(
+      "AGENT_HUB_ENABLE_UNANIMOUS_AUTO_FULL_ACCESS",
+      defaultDebatePolicy.enableUnanimousAutoFullAccess
     )
   };
 }

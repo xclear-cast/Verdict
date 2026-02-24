@@ -6,6 +6,7 @@ import {
   type AgentConfig,
   type DebateTurn,
   type PatchProposal,
+  type ProtectionPolicy,
   type Stage,
   type TaskDecisionRequest,
   type TaskEvent,
@@ -20,8 +21,10 @@ import { applyEditOperations } from "../services/patchApplier.js";
 import { evaluatePatchSafety } from "../services/patchSafety.js";
 import { runVerification } from "../services/verificationRunner.js";
 
+type StageAccessMode = "read_only" | "workspace" | "full_access";
+
 type StageRunOutcome =
-  | { status: "ok" }
+  | { status: "ok"; accessMode: StageAccessMode; autoFullAccessByUnanimous: boolean }
   | { status: "needs_human_decision"; reason: string }
   | { status: "stopped_budget"; reason: string }
   | { status: "failed"; reason: string };
@@ -40,6 +43,60 @@ function sanitizePatchProposal(taskId: string, proposal: PatchProposal): PatchPr
     taskId,
     touchedFiles: Array.from(touched)
   };
+}
+
+function isUnanimousApprove(agents: AgentConfig[], roundTurns: DebateTurn[]): boolean {
+  const byAgent = new Map(roundTurns.map((turn) => [turn.agentId, turn]));
+  if (byAgent.size < agents.length) return false;
+  for (const agent of agents) {
+    const turn = byAgent.get(agent.id);
+    if (!turn || turn.verdict !== "approve") return false;
+  }
+  return true;
+}
+
+function isReadOnlyPolicy(policy: ProtectionPolicy): boolean {
+  return (
+    !policy.allowPathEscape &&
+    !policy.allowTestChangesWithApproval &&
+    policy.protectedPathPatterns.includes("**/*") &&
+    policy.protectedTestPathPatterns.includes("**/*")
+  );
+}
+
+function isFullAccessPolicy(policy: ProtectionPolicy): boolean {
+  return (
+    Boolean(policy.allowPathEscape) &&
+    Boolean(policy.allowTestChangesWithApproval) &&
+    policy.protectedPathPatterns.length === 0 &&
+    policy.protectedTestPathPatterns.length === 0
+  );
+}
+
+function asFullAccessPolicy(): ProtectionPolicy {
+  return {
+    protectedPathPatterns: [],
+    protectedTestPathPatterns: [],
+    allowTestChangesWithApproval: true,
+    allowPathEscape: true
+  };
+}
+
+function resolveStageProtectionPolicy(
+  basePolicy: ProtectionPolicy,
+  unanimousApproved: boolean,
+  enableUnanimousAutoFullAccess: boolean
+): { policy: ProtectionPolicy; accessMode: StageAccessMode; autoFullAccessByUnanimous: boolean } {
+  if (isReadOnlyPolicy(basePolicy)) {
+    return { policy: basePolicy, accessMode: "read_only", autoFullAccessByUnanimous: false };
+  }
+  if (isFullAccessPolicy(basePolicy)) {
+    return { policy: basePolicy, accessMode: "full_access", autoFullAccessByUnanimous: false };
+  }
+  if (enableUnanimousAutoFullAccess && unanimousApproved) {
+    return { policy: asFullAccessPolicy(), accessMode: "full_access", autoFullAccessByUnanimous: true };
+  }
+  return { policy: basePolicy, accessMode: "workspace", autoFullAccessByUnanimous: false };
 }
 
 function getStageConstraints(stage: Stage): string[] {
@@ -172,7 +229,11 @@ export class TaskRunner {
             taskId,
             type: "stage_completed",
             stage,
-            data: { approved: true },
+            data: {
+              approved: true,
+              accessMode: outcome.accessMode,
+              autoFullAccessByUnanimous: outcome.autoFullAccessByUnanimous
+            },
             createdAt: nowIso()
           });
           continue;
@@ -241,6 +302,7 @@ export class TaskRunner {
       this.store.updateTask(taskId, { currentAttempt: attempt });
       const turnsForAttempt: DebateTurn[] = [];
       let consensusApproved = false;
+      let unanimousApproved = false;
 
       for (let round = 1; round <= request.debatePolicy.maxDebateRounds; round += 1) {
         for (const agent of request.agents) {
@@ -326,6 +388,7 @@ export class TaskRunner {
         const consensus = evaluateConsensus(request.agents, roundTurns, request.debatePolicy);
         if (consensus.approved) {
           consensusApproved = true;
+          unanimousApproved = isUnanimousApprove(request.agents, roundTurns);
           break;
         }
       }
@@ -337,6 +400,12 @@ export class TaskRunner {
         return { status: "needs_human_decision", reason: `CONSENSUS_FAILED:${stage}` };
       }
 
+      const stagePolicy = resolveStageProtectionPolicy(
+        request.protectionPolicy,
+        unanimousApproved,
+        request.debatePolicy.enableUnanimousAutoFullAccess
+      );
+
       if (stage === "patch") {
         const selectedPatch = this.selectPatchProposal(turnsForAttempt, driver.id);
         if (!selectedPatch) {
@@ -345,7 +414,7 @@ export class TaskRunner {
         }
         const patch = sanitizePatchProposal(taskId, selectedPatch);
         this.store.savePatch(taskId, patch, false);
-        const safety = evaluatePatchSafety(request.workspacePath, patch, request.protectionPolicy);
+        const safety = evaluatePatchSafety(request.workspacePath, patch, stagePolicy.policy);
         if (safety.blocked) {
           this.store.markLatestPatchApplied(taskId, false, safety.reason);
           if (attempt < request.debatePolicy.maxRetriesPerStage) continue;
@@ -377,7 +446,7 @@ export class TaskRunner {
           if (stageFixPatch) {
             const patch = sanitizePatchProposal(taskId, stageFixPatch);
             this.store.savePatch(taskId, patch, false);
-            const safety = evaluatePatchSafety(request.workspacePath, patch, request.protectionPolicy);
+            const safety = evaluatePatchSafety(request.workspacePath, patch, stagePolicy.policy);
             if (!safety.blocked) {
               const applyResult = applyEditOperations(request.workspacePath, patch.editOperations);
               this.store.markLatestPatchApplied(taskId, applyResult.success, applyResult.errors.join("; "));
@@ -400,7 +469,11 @@ export class TaskRunner {
         }
       }
 
-      return { status: "ok" };
+      return {
+        status: "ok",
+        accessMode: stagePolicy.accessMode,
+        autoFullAccessByUnanimous: stagePolicy.autoFullAccessByUnanimous
+      };
     }
 
     return { status: "failed", reason: `UNEXPECTED_STAGE_EXIT:${stage}` };

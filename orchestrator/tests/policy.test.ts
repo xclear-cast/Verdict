@@ -33,7 +33,8 @@ describe("policy.evaluateConsensus", () => {
         maxRetriesPerStage: 2,
         consensusMode: "unanimous",
         quorumRatio: 1,
-        criticalOnlyInFinalRound: true
+        criticalOnlyInFinalRound: true,
+        enableUnanimousAutoFullAccess: true
       }
     );
     expect(approved.approved).toBe(true);
@@ -46,7 +47,8 @@ describe("policy.evaluateConsensus", () => {
         maxRetriesPerStage: 2,
         consensusMode: "unanimous",
         quorumRatio: 1,
-        criticalOnlyInFinalRound: true
+        criticalOnlyInFinalRound: true,
+        enableUnanimousAutoFullAccess: true
       }
     );
     expect(rejected.approved).toBe(false);
@@ -61,7 +63,8 @@ describe("policy.evaluateConsensus", () => {
         maxRetriesPerStage: 2,
         consensusMode: "judge",
         quorumRatio: 0.67,
-        criticalOnlyInFinalRound: true
+        criticalOnlyInFinalRound: true,
+        enableUnanimousAutoFullAccess: true
       }
     );
     expect(approved.approved).toBe(true);
