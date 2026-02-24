@@ -13,3 +13,8 @@ Provider-agnostic multi-agent debate coding assistant for VS Code.
 ## Requirement
 
 - Run local orchestrator at `http://127.0.0.1:3939`
+
+## Click Workflow
+
+- Click left Activity Bar icon: `Multi-Agent`
+- Use sidebar buttons: `Start Task`, `Show Log`, `Approve`, `Reject`, `Retry`

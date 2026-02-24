@@ -81,6 +81,9 @@ This will:
 After completion, restart VS Code and run command palette:
 - `Multi-Agent: Start Task`
 
+Or click the left Activity Bar icon:
+- `Multi-Agent` -> click `Start Task`
+
 ## Notes
 
 - If no provider keys are configured, use `mock` agents in `AGENT_HUB_AGENTS_JSON`.

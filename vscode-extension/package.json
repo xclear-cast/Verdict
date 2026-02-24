@@ -6,6 +6,7 @@
   "publisher": "local",
   "files": [
     "dist/**",
+    "media/**",
     "package.json",
     "README.md"
   ],
@@ -16,6 +17,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onView:multiAgent.sidebar",
     "onCommand:multiAgent.startTask",
     "onCommand:multiAgent.approvePatch",
     "onCommand:multiAgent.rejectPatch",
@@ -46,6 +48,24 @@
         "title": "Multi-Agent: Show Debate Log"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "multiAgent",
+          "title": "Multi-Agent",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "multiAgent": [
+        {
+          "id": "multiAgent.sidebar",
+          "name": "Control Panel",
+          "type": "webview"
+        }
+      ]
+    },
     "configuration": {
       "title": "Multi-Agent Debate",
       "properties": {

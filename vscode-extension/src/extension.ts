@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import path from "node:path";
 
 type DecisionAction = "approve_patch" | "reject_patch" | "retry_step";
+type SidebarAction = "startTask" | "showDebateLog" | "approvePatch" | "rejectPatch" | "retryStep" | "refreshState";
 
 interface TaskBundle {
   task: {
@@ -45,6 +46,154 @@ const EVENT_NAMES = [
   "task_stopped_budget",
   "decision_applied"
 ] as const;
+
+class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
+  static readonly viewType = "multiAgent.sidebar";
+  private view?: vscode.WebviewView;
+
+  constructor(private readonly context: vscode.ExtensionContext) {}
+
+  resolveWebviewView(webviewView: vscode.WebviewView): void {
+    this.view = webviewView;
+    webviewView.webview.options = {
+      enableScripts: true
+    };
+    webviewView.webview.html = this.renderSidebarHtml(webviewView.webview);
+
+    webviewView.webview.onDidReceiveMessage(
+      async (message: { command?: SidebarAction }) => {
+        const command = message?.command;
+        if (!command) return;
+
+        if (command === "refreshState") {
+          this.postState();
+          return;
+        }
+
+        const commandMap: Record<Exclude<SidebarAction, "refreshState">, string> = {
+          startTask: "multiAgent.startTask",
+          showDebateLog: "multiAgent.showDebateLog",
+          approvePatch: "multiAgent.approvePatch",
+          rejectPatch: "multiAgent.rejectPatch",
+          retryStep: "multiAgent.retryStep"
+        };
+
+        const target = commandMap[command as Exclude<SidebarAction, "refreshState">];
+        if (!target) return;
+
+        try {
+          await vscode.commands.executeCommand(target);
+          this.postToast("Done");
+        } catch (error) {
+          const text = error instanceof Error ? error.message : String(error);
+          this.postToast(`Error: ${text}`);
+        }
+        this.postState();
+      },
+      undefined,
+      this.context.subscriptions
+    );
+
+    this.postState();
+  }
+
+  refresh(): void {
+    this.postState();
+  }
+
+  private postToast(message: string): void {
+    this.view?.webview.postMessage({
+      type: "toast",
+      message
+    });
+  }
+
+  private postState(): void {
+    this.view?.webview.postMessage({
+      type: "state",
+      taskId: this.context.globalState.get<string>(LAST_TASK_KEY) ?? "",
+      orchestratorUrl: getOrchestratorUrl()
+    });
+  }
+
+  private renderSidebarHtml(webview: vscode.Webview): string {
+    const nonce = createNonce();
+    return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';"
+    />
+    <style>
+      body { font-family: Segoe UI, sans-serif; padding: 12px; color: var(--vscode-foreground); }
+      .card { border: 1px solid var(--vscode-editorWidget-border); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+      .title { font-weight: 700; margin-bottom: 8px; }
+      .meta { font-size: 12px; opacity: 0.85; margin-bottom: 4px; word-break: break-all; }
+      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      button {
+        border: 1px solid var(--vscode-button-border, transparent);
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        padding: 7px 8px;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      button:hover { background: var(--vscode-button-hoverBackground); }
+      #status { font-size: 12px; margin-top: 8px; min-height: 16px; opacity: 0.9; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="title">Multi-Agent</div>
+      <div class="meta">Task: <span id="taskId">-</span></div>
+      <div class="meta">API: <span id="apiUrl">-</span></div>
+      <div id="status">Ready</div>
+    </div>
+    <div class="actions">
+      <button data-action="startTask">Start Task</button>
+      <button data-action="showDebateLog">Show Log</button>
+      <button data-action="approvePatch">Approve</button>
+      <button data-action="rejectPatch">Reject</button>
+      <button data-action="retryStep">Retry</button>
+      <button data-action="refreshState">Refresh</button>
+    </div>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const taskIdEl = document.getElementById("taskId");
+      const apiUrlEl = document.getElementById("apiUrl");
+      const statusEl = document.getElementById("status");
+
+      document.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const action = btn.getAttribute("data-action");
+          if (!action) return;
+          statusEl.textContent = "Running...";
+          vscode.postMessage({ command: action });
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const msg = event.data;
+        if (msg?.type === "state") {
+          taskIdEl.textContent = msg.taskId || "-";
+          apiUrlEl.textContent = msg.orchestratorUrl || "-";
+          statusEl.textContent = "Ready";
+        }
+        if (msg?.type === "toast") {
+          statusEl.textContent = msg.message || "Done";
+        }
+      });
+
+      vscode.postMessage({ command: "refreshState" });
+    </script>
+  </body>
+</html>`;
+  }
+}
 
 function getOrchestratorUrl(): string {
   const config = vscode.workspace.getConfiguration("multiAgent");
@@ -334,6 +483,10 @@ async function postDecision(context: vscode.ExtensionContext, action: DecisionAc
 export function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel("Multi-Agent Debate");
   context.subscriptions.push(output);
+  const sidebarProvider = new MultiAgentSidebarProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(MultiAgentSidebarProvider.viewType, sidebarProvider)
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("multiAgent.startTask", async () => {
@@ -361,10 +514,12 @@ export function activate(context: vscode.ExtensionContext) {
         await context.globalState.update(LAST_TASK_KEY, bundle.task.id);
         output.appendLine(`[startTask] taskId=${bundle.task.id}`);
         vscode.window.showInformationMessage(`Task started: ${bundle.task.id}`);
+        sidebarProvider.refresh();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         output.appendLine(`[startTask][error] ${message}`);
         vscode.window.showErrorMessage(`Start failed: ${message}`);
+        sidebarProvider.refresh();
       }
     })
   );
@@ -372,18 +527,21 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("multiAgent.approvePatch", async () => {
       await postDecision(context, "approve_patch");
+      sidebarProvider.refresh();
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("multiAgent.rejectPatch", async () => {
       await postDecision(context, "reject_patch");
+      sidebarProvider.refresh();
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("multiAgent.retryStep", async () => {
       await postDecision(context, "retry_step");
+      sidebarProvider.refresh();
     })
   );
 
@@ -406,6 +564,7 @@ export function activate(context: vscode.ExtensionContext) {
         const message = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`Load log failed: ${message}`);
       }
+      sidebarProvider.refresh();
     })
   );
 }
