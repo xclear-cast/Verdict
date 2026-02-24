@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@agent-hub/shared": "0.1.0",
+    "@types/diff-match-patch": "^1.0.36",
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
+    "diff-match-patch": "^1.0.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "picomatch": "^4.0.2",
