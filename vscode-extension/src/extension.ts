@@ -207,6 +207,8 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       .card { border: 1px solid var(--vscode-editorWidget-border); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
       .title { font-weight: 700; margin-bottom: 8px; }
       .meta { font-size: 12px; opacity: 0.9; margin-bottom: 4px; word-break: break-all; }
+      .top-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+      .lang-btn { min-width: 56px; }
       .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .full { grid-column: span 2; }
       .field { margin-top: 8px; }
@@ -284,90 +286,93 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
     </style>
   </head>
   <body>
+    <div class="top-row">
+      <button id="langToggleBtn" class="lang-btn" type="button">KO</button>
+    </div>
     <div class="card">
-      <div class="title">Multi-Agent</div>
-      <div class="meta">Task: <span id="taskId">-</span></div>
-      <div class="meta">API: <span id="apiUrl">-</span></div>
-      <div class="meta">OpenAI Key: <span id="openAIStatus">not set</span></div>
-      <div class="meta">Anthropic Key: <span id="anthropicStatus">not set</span></div>
-      <div class="meta">Gemini Key: <span id="geminiStatus">not set</span></div>
-      <div class="meta">Writer Agent: <span id="driverStatus">auto</span></div>
-      <div class="meta">Debate Policy: <span id="debateStatus">default</span></div>
-      <div class="meta">Budget Limits: <span id="budgetStatus">default</span></div>
-      <div id="status">Ready</div>
+      <div class="title" data-i18n="sidebar.title">Multi-Agent</div>
+      <div class="meta"><span data-i18n="sidebar.taskLabel">Task:</span> <span id="taskId">-</span></div>
+      <div class="meta"><span data-i18n="sidebar.apiLabel">API:</span> <span id="apiUrl">-</span></div>
+      <div class="meta"><span data-i18n="sidebar.openaiLabel">OpenAI Key:</span> <span id="openAIStatus">not set</span></div>
+      <div class="meta"><span data-i18n="sidebar.anthropicLabel">Anthropic Key:</span> <span id="anthropicStatus">not set</span></div>
+      <div class="meta"><span data-i18n="sidebar.geminiLabel">Gemini Key:</span> <span id="geminiStatus">not set</span></div>
+      <div class="meta"><span data-i18n="sidebar.writerLabel">Writer Agent:</span> <span id="driverStatus">auto</span></div>
+      <div class="meta"><span data-i18n="sidebar.debatePolicyLabel">Debate Policy:</span> <span id="debateStatus">default</span></div>
+      <div class="meta"><span data-i18n="sidebar.budgetLabel">Budget Limits:</span> <span id="budgetStatus">default</span></div>
+      <div id="status" data-i18n="sidebar.status.ready">Ready</div>
     </div>
 
     <div class="card">
-      <div class="title">API Settings</div>
-      <input id="openAIKeyInput" type="password" placeholder="OpenAI API key (optional)" />
-      <input id="anthropicKeyInput" type="password" placeholder="Anthropic API key (optional)" />
-      <input id="geminiKeyInput" type="password" placeholder="Google Gemini API key (optional)" />
-      <input id="driverIdInput" type="text" placeholder="Writer Agent ID (optional, e.g. coder-openai)" />
+      <div class="title" data-i18n="sidebar.apiSettings">API Settings</div>
+      <input id="openAIKeyInput" type="password" data-i18n-placeholder="sidebar.placeholder.openai" placeholder="OpenAI API key (optional)" />
+      <input id="anthropicKeyInput" type="password" data-i18n-placeholder="sidebar.placeholder.anthropic" placeholder="Anthropic API key (optional)" />
+      <input id="geminiKeyInput" type="password" data-i18n-placeholder="sidebar.placeholder.gemini" placeholder="Google Gemini API key (optional)" />
+      <input id="driverIdInput" type="text" data-i18n-placeholder="sidebar.placeholder.writer" placeholder="Writer Agent ID (optional, e.g. coder-openai)" />
       <div class="actions" style="margin-top:8px;">
-        <button class="full" data-action="saveApiSettings">Save API Keys</button>
+        <button class="full" data-action="saveApiSettings" data-i18n="sidebar.button.saveApi">Save API Keys</button>
       </div>
     </div>
 
     <div class="card">
-      <div class="title">Debate & Budget Settings</div>
+      <div class="title" data-i18n="sidebar.debateBudget">Debate & Budget Settings</div>
       <div class="field">
-        <div class="field-label">Max Debate Rounds <button type="button" class="help-btn" data-help="maxDebateRounds">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.maxDebateRounds">Max Debate Rounds</span> <button type="button" class="help-btn" data-help="maxDebateRounds">?</button></div>
         <input id="maxDebateRoundsInput" type="number" min="1" max="5" placeholder="2" />
       </div>
       <div class="field">
-        <div class="field-label">Max Retries Per Stage <button type="button" class="help-btn" data-help="maxRetriesPerStage">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.maxRetriesPerStage">Max Retries Per Stage</span> <button type="button" class="help-btn" data-help="maxRetriesPerStage">?</button></div>
         <input id="maxRetriesPerStageInput" type="number" min="0" max="10" placeholder="2" />
       </div>
       <div class="field">
-        <div class="field-label">Consensus Mode <button type="button" class="help-btn" data-help="consensusMode">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.consensusMode">Consensus Mode</span> <button type="button" class="help-btn" data-help="consensusMode">?</button></div>
         <select id="consensusModeInput">
-          <option value="">default (unanimous)</option>
-          <option value="unanimous">unanimous</option>
-          <option value="quorum">quorum</option>
-          <option value="judge">judge</option>
+          <option id="consensusModeDefaultOption" value="">default (unanimous)</option>
+          <option id="consensusModeUnanimousOption" value="unanimous">unanimous</option>
+          <option id="consensusModeQuorumOption" value="quorum">quorum</option>
+          <option id="consensusModeJudgeOption" value="judge">judge</option>
         </select>
       </div>
       <div class="field">
-        <div class="field-label">Quorum Ratio <button type="button" class="help-btn" data-help="quorumRatio">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.quorumRatio">Quorum Ratio</span> <button type="button" class="help-btn" data-help="quorumRatio">?</button></div>
         <input id="quorumRatioInput" type="number" min="0.5" max="1" step="0.01" placeholder="1.0" />
       </div>
       <div class="check-field">
         <input id="criticalOnlyInput" type="checkbox" />
-        <span>Critical-only review in final round</span>
+        <span data-i18n="sidebar.label.criticalOnly">Critical-only review in final round</span>
         <button type="button" class="help-btn" data-help="criticalOnlyInFinalRound">?</button>
       </div>
       <div class="field">
-        <div class="field-label">Max Stage Executions <button type="button" class="help-btn" data-help="maxStageExecutions">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.maxStageExecutions">Max Stage Executions</span> <button type="button" class="help-btn" data-help="maxStageExecutions">?</button></div>
         <input id="maxStageExecutionsInput" type="number" min="1" max="20" placeholder="5" />
       </div>
       <div class="field">
-        <div class="field-label">Max Model Calls Per Stage <button type="button" class="help-btn" data-help="maxModelCallsPerStage">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.maxModelCallsPerStage">Max Model Calls Per Stage</span> <button type="button" class="help-btn" data-help="maxModelCallsPerStage">?</button></div>
         <input id="maxModelCallsPerStageInput" type="number" min="1" max="200" placeholder="4" />
       </div>
       <div class="field">
-        <div class="field-label">Max Model Calls Per Task <button type="button" class="help-btn" data-help="maxModelCallsPerTask">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.maxModelCallsPerTask">Max Model Calls Per Task</span> <button type="button" class="help-btn" data-help="maxModelCallsPerTask">?</button></div>
         <input id="maxModelCallsPerTaskInput" type="number" min="1" max="2000" placeholder="40" />
       </div>
       <div class="field">
-        <div class="field-label">Max Cost USD <button type="button" class="help-btn" data-help="maxCostUsd">?</button></div>
+        <div class="field-label"><span data-i18n="sidebar.label.maxCostUsd">Max Cost USD</span> <button type="button" class="help-btn" data-help="maxCostUsd">?</button></div>
         <input id="maxCostUsdInput" type="number" min="0.01" max="1000" step="0.01" placeholder="1.00" />
       </div>
       <div class="actions" style="margin-top:8px;">
-        <button class="full" data-action="saveApiSettings">Save Debate/Budget</button>
+        <button class="full" data-action="saveApiSettings" data-i18n="sidebar.button.saveDebate">Save Debate/Budget</button>
       </div>
     </div>
 
     <div class="actions">
-      <button class="full" data-action="openStudio">Open Studio</button>
-      <button class="full" data-action="refreshState">Refresh</button>
+      <button class="full" data-action="openStudio" data-i18n="sidebar.button.openStudio">Open Studio</button>
+      <button class="full" data-action="refreshState" data-i18n="sidebar.button.refresh">Refresh</button>
     </div>
 
     <div id="helpModal" class="help-modal hidden">
       <div class="help-card">
-        <div id="helpTitle" class="help-title">Help</div>
+        <div id="helpTitle" class="help-title" data-i18n="sidebar.help.title">Help</div>
         <div id="helpBody" class="help-body"></div>
         <div class="actions">
-          <button id="helpCloseBtn" class="full" type="button">Close</button>
+          <button id="helpCloseBtn" class="full" type="button" data-i18n="sidebar.button.close">Close</button>
         </div>
       </div>
     </div>
@@ -400,6 +405,11 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       const helpTitle = document.getElementById("helpTitle");
       const helpBody = document.getElementById("helpBody");
       const helpCloseBtn = document.getElementById("helpCloseBtn");
+      const langToggleBtn = document.getElementById("langToggleBtn");
+      const consensusModeDefaultOption = document.getElementById("consensusModeDefaultOption");
+      const consensusModeUnanimousOption = document.getElementById("consensusModeUnanimousOption");
+      const consensusModeQuorumOption = document.getElementById("consensusModeQuorumOption");
+      const consensusModeJudgeOption = document.getElementById("consensusModeJudgeOption");
 
       const defaults = {
         maxDebateRounds: 2,
@@ -413,16 +423,153 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
         maxCostUsd: 1
       };
 
-      const helpTexts = {
-        maxDebateRounds: { title: "Max Debate Rounds", body: "Sets how many rounds agents can debate per stage." },
-        maxRetriesPerStage: { title: "Max Retries Per Stage", body: "How many retries are allowed for each stage." },
-        consensusMode: { title: "Consensus Mode", body: "unanimous: all approve, quorum: ratio threshold, judge: judge role decides." },
-        quorumRatio: { title: "Quorum Ratio", body: "Only used in quorum mode. Example: 0.67 means 67%+ approvals." },
-        criticalOnlyInFinalRound: { title: "Critical-only Final Round", body: "Final round focuses on critical issues only." },
-        maxStageExecutions: { title: "Max Stage Executions", body: "Maximum stage executions per task." },
-        maxModelCallsPerStage: { title: "Max Model Calls Per Stage", body: "Maximum model calls allowed in one stage." },
-        maxModelCallsPerTask: { title: "Max Model Calls Per Task", body: "Maximum model calls allowed in one task." },
-        maxCostUsd: { title: "Max Cost USD", body: "Estimated per-task cost ceiling; task stops when exceeded." }
+      const sidebarLangStorageKey = "multiAgent.sidebar.lang";
+      let currentLang = "en";
+      try {
+        const savedLang = localStorage.getItem(sidebarLangStorageKey);
+        if (savedLang === "ko" || savedLang === "en") {
+          currentLang = savedLang;
+        }
+      } catch {}
+
+      const i18n = {
+        en: {
+          "sidebar.title": "Multi-Agent",
+          "sidebar.taskLabel": "Task:",
+          "sidebar.apiLabel": "API:",
+          "sidebar.openaiLabel": "OpenAI Key:",
+          "sidebar.anthropicLabel": "Anthropic Key:",
+          "sidebar.geminiLabel": "Gemini Key:",
+          "sidebar.writerLabel": "Writer Agent:",
+          "sidebar.debatePolicyLabel": "Debate Policy:",
+          "sidebar.budgetLabel": "Budget Limits:",
+          "sidebar.apiSettings": "API Settings",
+          "sidebar.debateBudget": "Debate & Budget Settings",
+          "sidebar.label.maxDebateRounds": "Max Debate Rounds",
+          "sidebar.label.maxRetriesPerStage": "Max Retries Per Stage",
+          "sidebar.label.consensusMode": "Consensus Mode",
+          "sidebar.label.quorumRatio": "Quorum Ratio",
+          "sidebar.label.criticalOnly": "Critical-only review in final round",
+          "sidebar.label.maxStageExecutions": "Max Stage Executions",
+          "sidebar.label.maxModelCallsPerStage": "Max Model Calls Per Stage",
+          "sidebar.label.maxModelCallsPerTask": "Max Model Calls Per Task",
+          "sidebar.label.maxCostUsd": "Max Cost USD",
+          "sidebar.button.saveApi": "Save API Keys",
+          "sidebar.button.saveDebate": "Save Debate/Budget",
+          "sidebar.button.openStudio": "Open Studio",
+          "sidebar.button.refresh": "Refresh",
+          "sidebar.button.close": "Close",
+          "sidebar.help.title": "Help",
+          "sidebar.placeholder.openai": "OpenAI API key (optional)",
+          "sidebar.placeholder.anthropic": "Anthropic API key (optional)",
+          "sidebar.placeholder.gemini": "Google Gemini API key (optional)",
+          "sidebar.placeholder.writer": "Writer Agent ID (optional, e.g. coder-openai)",
+          "sidebar.status.ready": "Ready",
+          "sidebar.status.running": "Running...",
+          "sidebar.status.done": "Done",
+          "sidebar.status.notSet": "not set",
+          "sidebar.status.configured": "configured",
+          "sidebar.status.auto": "auto",
+          "sidebar.consensus.default": "default (unanimous)",
+          "sidebar.consensus.unanimous": "unanimous",
+          "sidebar.consensus.quorum": "quorum",
+          "sidebar.consensus.judge": "judge"
+        },
+        ko: {
+          "sidebar.title": "멀티 에이전트",
+          "sidebar.taskLabel": "작업:",
+          "sidebar.apiLabel": "API:",
+          "sidebar.openaiLabel": "OpenAI 키:",
+          "sidebar.anthropicLabel": "Anthropic 키:",
+          "sidebar.geminiLabel": "Gemini 키:",
+          "sidebar.writerLabel": "작성 에이전트:",
+          "sidebar.debatePolicyLabel": "토론 정책:",
+          "sidebar.budgetLabel": "예산 제한:",
+          "sidebar.apiSettings": "API 설정",
+          "sidebar.debateBudget": "토론/예산 설정",
+          "sidebar.label.maxDebateRounds": "최대 토론 라운드",
+          "sidebar.label.maxRetriesPerStage": "단계별 최대 재시도",
+          "sidebar.label.consensusMode": "합의 모드",
+          "sidebar.label.quorumRatio": "정족수 비율",
+          "sidebar.label.criticalOnly": "최종 라운드에서 치명 이슈만 검토",
+          "sidebar.label.maxStageExecutions": "최대 단계 실행 수",
+          "sidebar.label.maxModelCallsPerStage": "단계별 최대 모델 호출",
+          "sidebar.label.maxModelCallsPerTask": "작업별 최대 모델 호출",
+          "sidebar.label.maxCostUsd": "최대 비용(USD)",
+          "sidebar.button.saveApi": "API 키 저장",
+          "sidebar.button.saveDebate": "토론/예산 저장",
+          "sidebar.button.openStudio": "스튜디오 열기",
+          "sidebar.button.refresh": "새로고침",
+          "sidebar.button.close": "닫기",
+          "sidebar.help.title": "도움말",
+          "sidebar.placeholder.openai": "OpenAI API 키 (선택)",
+          "sidebar.placeholder.anthropic": "Anthropic API 키 (선택)",
+          "sidebar.placeholder.gemini": "Google Gemini API 키 (선택)",
+          "sidebar.placeholder.writer": "작성 에이전트 ID (선택, 예: coder-openai)",
+          "sidebar.status.ready": "준비됨",
+          "sidebar.status.running": "실행 중...",
+          "sidebar.status.done": "완료",
+          "sidebar.status.notSet": "미설정",
+          "sidebar.status.configured": "설정됨",
+          "sidebar.status.auto": "자동",
+          "sidebar.consensus.default": "기본값 (만장일치)",
+          "sidebar.consensus.unanimous": "만장일치",
+          "sidebar.consensus.quorum": "정족수",
+          "sidebar.consensus.judge": "판정자"
+        }
+      };
+
+      const helpTextsByLang = {
+        en: {
+          maxDebateRounds: { title: "Max Debate Rounds", body: "Sets how many rounds agents can debate per stage." },
+          maxRetriesPerStage: { title: "Max Retries Per Stage", body: "How many retries are allowed for each stage." },
+          consensusMode: { title: "Consensus Mode", body: "unanimous: all approve, quorum: ratio threshold, judge: judge role decides." },
+          quorumRatio: { title: "Quorum Ratio", body: "Only used in quorum mode. Example: 0.67 means 67%+ approvals." },
+          criticalOnlyInFinalRound: { title: "Critical-only Final Round", body: "Final round focuses on critical issues only." },
+          maxStageExecutions: { title: "Max Stage Executions", body: "Maximum stage executions per task." },
+          maxModelCallsPerStage: { title: "Max Model Calls Per Stage", body: "Maximum model calls allowed in one stage." },
+          maxModelCallsPerTask: { title: "Max Model Calls Per Task", body: "Maximum model calls allowed in one task." },
+          maxCostUsd: { title: "Max Cost USD", body: "Estimated per-task cost ceiling; task stops when exceeded." }
+        },
+        ko: {
+          maxDebateRounds: { title: "최대 토론 라운드", body: "각 단계에서 에이전트가 토론할 수 있는 최대 라운드 수입니다." },
+          maxRetriesPerStage: { title: "단계별 최대 재시도", body: "각 단계 실패 시 자동 재시도 가능한 횟수입니다." },
+          consensusMode: { title: "합의 모드", body: "unanimous: 전원 승인, quorum: 비율 충족, judge: 판정자 결정." },
+          quorumRatio: { title: "정족수 비율", body: "quorum 모드에서만 사용됩니다. 예: 0.67은 67% 이상 승인." },
+          criticalOnlyInFinalRound: { title: "최종 라운드 치명 이슈만", body: "최종 라운드에서 스타일 지적은 줄이고 치명 이슈만 검토합니다." },
+          maxStageExecutions: { title: "최대 단계 실행 수", body: "작업 1개에서 단계를 실행할 수 있는 최대 횟수입니다." },
+          maxModelCallsPerStage: { title: "단계별 최대 모델 호출", body: "단일 단계에서 허용되는 모델 호출 최대 횟수입니다." },
+          maxModelCallsPerTask: { title: "작업별 최대 모델 호출", body: "작업 전체에서 허용되는 모델 호출 최대 횟수입니다." },
+          maxCostUsd: { title: "최대 비용(USD)", body: "작업당 예상 비용 상한입니다. 초과 시 작업이 중단됩니다." }
+        }
+      };
+
+      function t(key) {
+        const table = i18n[currentLang] || i18n.en;
+        return table[key] || i18n.en[key] || key;
+      }
+
+      function applyLocale() {
+        document.querySelectorAll("[data-i18n]").forEach((element) => {
+          const key = element.getAttribute("data-i18n");
+          if (!key) return;
+          element.textContent = t(key);
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+          const key = element.getAttribute("data-i18n-placeholder");
+          if (!key || !("placeholder" in element)) return;
+          element.placeholder = t(key);
+        });
+
+        if (consensusModeDefaultOption) consensusModeDefaultOption.textContent = t("sidebar.consensus.default");
+        if (consensusModeUnanimousOption) consensusModeUnanimousOption.textContent = t("sidebar.consensus.unanimous");
+        if (consensusModeQuorumOption) consensusModeQuorumOption.textContent = t("sidebar.consensus.quorum");
+        if (consensusModeJudgeOption) consensusModeJudgeOption.textContent = t("sidebar.consensus.judge");
+
+        if (langToggleBtn) {
+          langToggleBtn.textContent = currentLang === "en" ? "KO" : "EN";
+        }
       };
 
       function readOptionalNumber(input) {
@@ -435,7 +582,8 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
       }
 
       function openHelp(key) {
-        const entry = helpTexts[key];
+        const table = helpTextsByLang[currentLang] || helpTextsByLang.en;
+        const entry = table[key] || helpTextsByLang.en[key];
         if (!entry || !helpModal || !helpTitle || !helpBody) return;
         helpTitle.textContent = entry.title;
         helpBody.textContent = entry.body;
@@ -451,7 +599,7 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
         btn.addEventListener("click", () => {
           const action = btn.getAttribute("data-action");
           if (!action) return;
-          statusEl.textContent = "Running...";
+          statusEl.textContent = t("sidebar.status.running");
           if (action === "saveApiSettings") {
             vscode.postMessage({
               command: action,
@@ -474,6 +622,16 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
           vscode.postMessage({ command: action });
         });
       });
+
+      if (langToggleBtn) {
+        langToggleBtn.addEventListener("click", () => {
+          currentLang = currentLang === "en" ? "ko" : "en";
+          try {
+            localStorage.setItem(sidebarLangStorageKey, currentLang);
+          } catch {}
+          applyLocale();
+        });
+      }
 
       document.querySelectorAll("button[data-help]").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -499,10 +657,10 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
         if (msg?.type === "state") {
           taskIdEl.textContent = msg.taskId || "-";
           apiUrlEl.textContent = msg.orchestratorUrl || "-";
-          openAIStatusEl.textContent = msg.runtime?.openAIApiKeyConfigured ? "configured" : "not set";
-          anthropicStatusEl.textContent = msg.runtime?.anthropicApiKeyConfigured ? "configured" : "not set";
-          geminiStatusEl.textContent = msg.runtime?.geminiApiKeyConfigured ? "configured" : "not set";
-          driverStatusEl.textContent = msg.runtime?.driverAgentId || "auto";
+          openAIStatusEl.textContent = msg.runtime?.openAIApiKeyConfigured ? t("sidebar.status.configured") : t("sidebar.status.notSet");
+          anthropicStatusEl.textContent = msg.runtime?.anthropicApiKeyConfigured ? t("sidebar.status.configured") : t("sidebar.status.notSet");
+          geminiStatusEl.textContent = msg.runtime?.geminiApiKeyConfigured ? t("sidebar.status.configured") : t("sidebar.status.notSet");
+          driverStatusEl.textContent = msg.runtime?.driverAgentId || t("sidebar.status.auto");
           debateStatusEl.textContent =
             "r=" + String(msg.runtime?.maxDebateRounds ?? defaults.maxDebateRounds) +
             ", retry=" + String(msg.runtime?.maxRetriesPerStage ?? defaults.maxRetriesPerStage) +
@@ -514,7 +672,7 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
             ", taskCalls=" + String(msg.runtime?.maxModelCallsPerTask ?? defaults.maxModelCallsPerTask) +
             ", maxCost=$" + String(msg.runtime?.maxCostUsd ?? defaults.maxCostUsd);
 
-          statusEl.textContent = "Ready";
+          statusEl.textContent = t("sidebar.status.ready");
           if (openAIKeyInput) openAIKeyInput.value = "";
           if (anthropicKeyInput) anthropicKeyInput.value = "";
           if (geminiKeyInput) geminiKeyInput.value = "";
@@ -559,10 +717,11 @@ class MultiAgentSidebarProvider implements vscode.WebviewViewProvider {
         }
 
         if (msg?.type === "toast") {
-          statusEl.textContent = msg.message || "Done";
+          statusEl.textContent = msg.message || t("sidebar.status.done");
         }
       });
 
+      applyLocale();
       vscode.postMessage({ command: "refreshState" });
     </script>
   </body>
@@ -1031,51 +1190,52 @@ function renderStudioHtml(
     <div class="header">
       <div class="summary-grid">
         <div class="summary-item">
-          <div class="row"><b>Task:</b> <span id="taskId">-</span></div>
-          <div class="row"><b>Status:</b> <span id="taskStatus">idle</span></div>
-          <div class="row"><b>Stage:</b> <span id="taskStage">-</span></div>
+          <div class="row"><b id="studioLblTask">Task:</b> <span id="taskId">-</span></div>
+          <div class="row"><b id="studioLblStatus">Status:</b> <span id="taskStatus">idle</span></div>
+          <div class="row"><b id="studioLblStage">Stage:</b> <span id="taskStage">-</span></div>
         </div>
         <div class="summary-item">
-          <div class="row"><b>API:</b> <span id="apiUrl">-</span></div>
-          <div class="row"><b>OpenAI:</b> <span id="openAIStatus">not set</span></div>
-          <div class="row"><b>Anthropic:</b> <span id="anthropicStatus">not set</span></div>
-          <div class="row"><b>Gemini:</b> <span id="geminiStatus">not set</span></div>
-          <div class="row"><b>Writer:</b> <span id="driverStatus">auto</span></div>
+          <div class="row"><b id="studioLblApi">API:</b> <span id="apiUrl">-</span></div>
+          <div class="row"><b id="studioLblOpenAI">OpenAI:</b> <span id="openAIStatus">not set</span></div>
+          <div class="row"><b id="studioLblAnthropic">Anthropic:</b> <span id="anthropicStatus">not set</span></div>
+          <div class="row"><b id="studioLblGemini">Gemini:</b> <span id="geminiStatus">not set</span></div>
+          <div class="row"><b id="studioLblWriter">Writer:</b> <span id="driverStatus">auto</span></div>
         </div>
         <div class="summary-item">
-          <div class="row"><b>Conn:</b> <span id="connectionState">idle</span></div>
-          <div class="row"><b>Turns:</b> <span id="turnCount">0</span></div>
-          <div class="row"><b>Verify:</b> <span id="verifyState">none</span></div>
-          <div class="row"><b>Error:</b> <span id="taskError">-</span></div>
+          <div class="row"><b id="studioLblConn">Conn:</b> <span id="connectionState">idle</span></div>
+          <div class="row"><b id="studioLblTurns">Turns:</b> <span id="turnCount">0</span></div>
+          <div class="row"><b id="studioLblVerify">Verify:</b> <span id="verifyState">none</span></div>
+          <div class="row"><b id="studioLblError">Error:</b> <span id="taskError">-</span></div>
         </div>
       </div>
       <div class="actions">
         <button id="refreshTaskBtn">Refresh Task</button>
         <button id="showLogBtn">Open Log Window</button>
+        <button id="studioLangToggleBtn">KO</button>
       </div>
     </div>
 
     <div class="split">
       <section class="panel">
-        <h3>Command Chat</h3>
+        <h3 id="studioCommandChatTitle">Command Chat</h3>
         <div id="chatStream" class="chat-stream"></div>
         <div class="composer">
-          <textarea id="goalInput" placeholder="Example: Refactor login API and make all tests pass"></textarea>
+          <textarea id="goalInput" data-i18n-placeholder="studio.placeholder.goal" placeholder="Example: Refactor login API and make all tests pass"></textarea>
           <button id="sendBtn">Send</button>
         </div>
-        <input id="decisionNote" type="text" placeholder="Decision note (optional)" />
+        <input id="decisionNote" type="text" data-i18n-placeholder="studio.placeholder.note" placeholder="Decision note (optional)" />
         <div class="decision-row">
           <button id="approveBtn">Approve</button>
           <button id="rejectBtn">Reject</button>
           <button id="retryBtn">Retry</button>
         </div>
-        <div class="tiny-meta">Studio layout: left panel = commands/final summary, right panel = debate/events</div>
+        <div id="studioLayoutHint" class="tiny-meta">Studio layout: left panel = commands/final summary, right panel = debate/events</div>
       </section>
 
       <section class="panel">
-        <h3>Debate Live</h3>
+        <h3 id="studioDebateLiveTitle">Debate Live</h3>
         <div id="debateStream" class="debate-stream"></div>
-        <h4>Event Log</h4>
+        <h4 id="studioEventLogTitle">Event Log</h4>
         <div id="eventLog" class="event-log"></div>
       </section>
     </div>
@@ -1100,6 +1260,179 @@ function renderStudioHtml(
         refreshQueued: false
       };
 
+      const studioLangStorageKey = "multiAgent.studio.lang";
+      let currentLang = "en";
+      try {
+        const savedLang = localStorage.getItem(studioLangStorageKey);
+        if (savedLang === "ko" || savedLang === "en") {
+          currentLang = savedLang;
+        }
+      } catch {}
+
+      const i18n = {
+        en: {
+          "studio.label.task": "Task:",
+          "studio.label.status": "Status:",
+          "studio.label.stage": "Stage:",
+          "studio.label.api": "API:",
+          "studio.label.openai": "OpenAI:",
+          "studio.label.anthropic": "Anthropic:",
+          "studio.label.gemini": "Gemini:",
+          "studio.label.writer": "Writer:",
+          "studio.label.conn": "Conn:",
+          "studio.label.turns": "Turns:",
+          "studio.label.verify": "Verify:",
+          "studio.label.error": "Error:",
+          "studio.button.refreshTask": "Refresh Task",
+          "studio.button.openLog": "Open Log Window",
+          "studio.button.send": "Send",
+          "studio.button.approve": "Approve",
+          "studio.button.reject": "Reject",
+          "studio.button.retry": "Retry",
+          "studio.title.commandChat": "Command Chat",
+          "studio.title.debateLive": "Debate Live",
+          "studio.title.eventLog": "Event Log",
+          "studio.meta.layout": "Studio layout: left panel = commands/final summary, right panel = debate/events",
+          "studio.placeholder.goal": "Example: Refactor login API and make all tests pass",
+          "studio.placeholder.note": "Decision note (optional)",
+          "studio.status.notSet": "not set",
+          "studio.status.configured": "configured",
+          "studio.status.auto": "auto",
+          "studio.status.idle": "idle",
+          "studio.status.none": "none",
+          "studio.author.you": "YOU",
+          "studio.author.hub": "HUB",
+          "studio.turns.empty": "No turns yet.",
+          "studio.warn.goalEmpty": "Goal is empty.",
+          "studio.warn.noTask": "No active task.",
+          "studio.error.unknown": "Unknown error",
+          "studio.conn.connected": "connected",
+          "studio.conn.reconnecting": "reconnecting...",
+          "studio.conn.updated": "updated",
+          "studio.conn.refreshFailed": "refresh failed",
+          "studio.conn.starting": "starting task...",
+          "studio.conn.live": "live",
+          "studio.conn.manual": "manual",
+          "studio.conn.restore": "restore",
+          "studio.conn.error": "error",
+          "studio.msg.reconnected": "Reconnected to existing task: ",
+          "studio.msg.startPrompt": "Type your goal in Command Chat and click Send to start.",
+          "studio.msg.taskStarted": "Task started: ",
+          "studio.msg.goal": "Goal: ",
+          "studio.msg.errorPrefix": "Error: "
+        },
+        ko: {
+          "studio.label.task": "작업:",
+          "studio.label.status": "상태:",
+          "studio.label.stage": "단계:",
+          "studio.label.api": "API:",
+          "studio.label.openai": "OpenAI:",
+          "studio.label.anthropic": "Anthropic:",
+          "studio.label.gemini": "Gemini:",
+          "studio.label.writer": "작성자:",
+          "studio.label.conn": "연결:",
+          "studio.label.turns": "턴:",
+          "studio.label.verify": "검증:",
+          "studio.label.error": "오류:",
+          "studio.button.refreshTask": "작업 새로고침",
+          "studio.button.openLog": "로그 창 열기",
+          "studio.button.send": "보내기",
+          "studio.button.approve": "승인",
+          "studio.button.reject": "거절",
+          "studio.button.retry": "재시도",
+          "studio.title.commandChat": "명령 채팅",
+          "studio.title.debateLive": "실시간 토론",
+          "studio.title.eventLog": "이벤트 로그",
+          "studio.meta.layout": "스튜디오 구성: 왼쪽=명령/최종결론, 오른쪽=토론/이벤트",
+          "studio.placeholder.goal": "예) 로그인 API 리팩터링하고 테스트까지 통과시켜줘",
+          "studio.placeholder.note": "의사결정 메모 (선택)",
+          "studio.status.notSet": "미설정",
+          "studio.status.configured": "설정됨",
+          "studio.status.auto": "자동",
+          "studio.status.idle": "대기",
+          "studio.status.none": "없음",
+          "studio.author.you": "사용자",
+          "studio.author.hub": "허브",
+          "studio.turns.empty": "아직 토론 턴이 없습니다.",
+          "studio.warn.goalEmpty": "목표가 비어 있습니다.",
+          "studio.warn.noTask": "활성 작업이 없습니다.",
+          "studio.error.unknown": "알 수 없는 오류",
+          "studio.conn.connected": "연결됨",
+          "studio.conn.reconnecting": "재연결 중...",
+          "studio.conn.updated": "업데이트됨",
+          "studio.conn.refreshFailed": "새로고침 실패",
+          "studio.conn.starting": "작업 시작 중...",
+          "studio.conn.live": "실시간",
+          "studio.conn.manual": "수동",
+          "studio.conn.restore": "복원",
+          "studio.conn.error": "오류",
+          "studio.msg.reconnected": "기존 작업에 다시 연결됨: ",
+          "studio.msg.startPrompt": "왼쪽 Command Chat에 목표를 입력하고 Send를 누르세요.",
+          "studio.msg.taskStarted": "작업 시작: ",
+          "studio.msg.goal": "목표: ",
+          "studio.msg.errorPrefix": "오류: "
+        }
+      };
+
+      function t(key) {
+        const table = i18n[currentLang] || i18n.en;
+        return table[key] || i18n.en[key] || key;
+      }
+
+      function connText(reason) {
+        if (!reason) return t("studio.conn.updated");
+        return t("studio.conn." + reason) || reason;
+      }
+
+      function applyLocale() {
+        setText("studioLblTask", t("studio.label.task"));
+        setText("studioLblStatus", t("studio.label.status"));
+        setText("studioLblStage", t("studio.label.stage"));
+        setText("studioLblApi", t("studio.label.api"));
+        setText("studioLblOpenAI", t("studio.label.openai"));
+        setText("studioLblAnthropic", t("studio.label.anthropic"));
+        setText("studioLblGemini", t("studio.label.gemini"));
+        setText("studioLblWriter", t("studio.label.writer"));
+        setText("studioLblConn", t("studio.label.conn"));
+        setText("studioLblTurns", t("studio.label.turns"));
+        setText("studioLblVerify", t("studio.label.verify"));
+        setText("studioLblError", t("studio.label.error"));
+        setText("refreshTaskBtn", t("studio.button.refreshTask"));
+        setText("showLogBtn", t("studio.button.openLog"));
+        setText("sendBtn", t("studio.button.send"));
+        setText("approveBtn", t("studio.button.approve"));
+        setText("rejectBtn", t("studio.button.reject"));
+        setText("retryBtn", t("studio.button.retry"));
+        setText("studioCommandChatTitle", t("studio.title.commandChat"));
+        setText("studioDebateLiveTitle", t("studio.title.debateLive"));
+        setText("studioEventLogTitle", t("studio.title.eventLog"));
+        setText("studioLayoutHint", t("studio.meta.layout"));
+
+        const langButton = byId("studioLangToggleBtn");
+        if (langButton) {
+          langButton.textContent = currentLang === "en" ? "KO" : "EN";
+        }
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+          const key = element.getAttribute("data-i18n-placeholder");
+          if (!key || !("placeholder" in element)) return;
+          element.placeholder = t(key);
+        });
+
+        const taskStatusEl = byId("taskStatus");
+        if (taskStatusEl && (taskStatusEl.textContent === "idle" || taskStatusEl.textContent === "대기")) {
+          taskStatusEl.textContent = t("studio.status.idle");
+        }
+        const verifyStateEl = byId("verifyState");
+        if (verifyStateEl && (verifyStateEl.textContent === "none" || verifyStateEl.textContent === "없음")) {
+          verifyStateEl.textContent = t("studio.status.none");
+        }
+        const connectionStateEl = byId("connectionState");
+        if (connectionStateEl && (connectionStateEl.textContent === "idle" || connectionStateEl.textContent === "대기")) {
+          connectionStateEl.textContent = t("studio.status.idle");
+        }
+      }
+
       function byId(id) {
         return document.getElementById(id);
       }
@@ -1122,7 +1455,7 @@ function renderStudioHtml(
 
         const author = document.createElement("div");
         author.className = "chat-author";
-        author.textContent = (role === "user" ? "YOU" : "HUB") + " - " + nowTime();
+        author.textContent = (role === "user" ? t("studio.author.you") : t("studio.author.hub")) + " - " + nowTime();
 
         const body = document.createElement("div");
         body.className = "chat-body";
@@ -1167,7 +1500,7 @@ function renderStudioHtml(
         if (!Array.isArray(turns) || turns.length === 0) {
           const empty = document.createElement("div");
           empty.className = "turn-card";
-          empty.textContent = "No turns yet.";
+          empty.textContent = t("studio.turns.empty");
           container.appendChild(empty);
           return;
         }
@@ -1208,7 +1541,7 @@ function renderStudioHtml(
         setText("turnCount", String(turns.length));
         const verify = bundle.latestVerification
           ? (bundle.latestVerification.passed ? "PASS" : "FAIL")
-          : "none";
+          : t("studio.status.none");
         setText("verifyState", verify);
         renderTurns(turns);
 
@@ -1233,10 +1566,10 @@ function renderStudioHtml(
         try {
           const bundle = await fetchBundle(state.taskId);
           renderBundle(bundle);
-          setText("connectionState", reason || "updated");
+          setText("connectionState", connText(reason));
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          setText("connectionState", "refresh failed");
+          setText("connectionState", t("studio.conn.refreshFailed"));
           addEvent("error", message);
         }
       }
@@ -1264,7 +1597,7 @@ function renderStudioHtml(
         const suffix = state.lastEventId > 0 ? ("?lastEventId=" + state.lastEventId) : "";
         const eventUrl = state.orchestratorUrl + "/events/" + encodeURIComponent(state.taskId) + suffix;
         state.eventSource = new EventSource(eventUrl);
-        setText("connectionState", "connected");
+        setText("connectionState", t("studio.conn.connected"));
 
         for (const eventName of initial.eventNames || []) {
           state.eventSource.addEventListener(eventName, (event) => {
@@ -1286,34 +1619,34 @@ function renderStudioHtml(
         }
 
         state.eventSource.onerror = () => {
-          setText("connectionState", "reconnecting...");
+          setText("connectionState", t("studio.conn.reconnecting"));
         };
       }
 
       function setRuntimeStatus() {
         setText("apiUrl", state.orchestratorUrl || "-");
-        setText("openAIStatus", state.runtime && state.runtime.openAIApiKeyConfigured ? "configured" : "not set");
-        setText("anthropicStatus", state.runtime && state.runtime.anthropicApiKeyConfigured ? "configured" : "not set");
-        setText("geminiStatus", state.runtime && state.runtime.geminiApiKeyConfigured ? "configured" : "not set");
-        setText("driverStatus", state.runtime && state.runtime.driverAgentId ? state.runtime.driverAgentId : "auto");
+        setText("openAIStatus", state.runtime && state.runtime.openAIApiKeyConfigured ? t("studio.status.configured") : t("studio.status.notSet"));
+        setText("anthropicStatus", state.runtime && state.runtime.anthropicApiKeyConfigured ? t("studio.status.configured") : t("studio.status.notSet"));
+        setText("geminiStatus", state.runtime && state.runtime.geminiApiKeyConfigured ? t("studio.status.configured") : t("studio.status.notSet"));
+        setText("driverStatus", state.runtime && state.runtime.driverAgentId ? state.runtime.driverAgentId : t("studio.status.auto"));
       }
 
       function onStart() {
         const goalInput = byId("goalInput");
         const goal = goalInput && goalInput.value ? goalInput.value.trim() : "";
         if (!goal) {
-          addEvent("warn", "Goal is empty.");
+          addEvent("warn", t("studio.warn.goalEmpty"));
           return;
         }
         addChat("user", goal);
         if (goalInput) goalInput.value = "";
-        setText("connectionState", "starting task...");
+        setText("connectionState", t("studio.conn.starting"));
         vscode.postMessage({ command: "startTask", userGoal: goal });
       }
 
       function onDecision(action) {
         if (!state.taskId) {
-          addEvent("warn", "No active task.");
+          addEvent("warn", t("studio.warn.noTask"));
           return;
         }
         const noteInput = byId("decisionNote");
@@ -1340,16 +1673,16 @@ function renderStudioHtml(
           vscode.postMessage({ command: "rememberTask", taskId: state.taskId });
           if (msg.source === "start") {
             const goal = msg.bundle.request && msg.bundle.request.userGoal ? msg.bundle.request.userGoal : "";
-            addChat("assistant", "Task started: " + state.taskId + (goal ? "\\nGoal: " + goal : ""));
+            addChat("assistant", t("studio.msg.taskStarted") + state.taskId + (goal ? "\\n" + t("studio.msg.goal") + goal : ""));
           }
           return;
         }
 
         if (msg.type === "error") {
-          const text = msg.message || "Unknown error";
-          addChat("assistant", "Error: " + text);
+          const text = msg.message || t("studio.error.unknown");
+          addChat("assistant", t("studio.msg.errorPrefix") + text);
           addEvent("error", text);
-          setText("connectionState", "error");
+          setText("connectionState", t("studio.conn.error"));
           return;
         }
       });
@@ -1380,17 +1713,32 @@ function renderStudioHtml(
       if (showLogBtn) {
         showLogBtn.addEventListener("click", () => vscode.postMessage({ command: "openDebateLog", taskId: state.taskId }));
       }
+      const studioLangToggleBtn = byId("studioLangToggleBtn");
+      if (studioLangToggleBtn) {
+        studioLangToggleBtn.addEventListener("click", () => {
+          currentLang = currentLang === "en" ? "ko" : "en";
+          try {
+            localStorage.setItem(studioLangStorageKey, currentLang);
+          } catch {}
+          applyLocale();
+          setRuntimeStatus();
+          if (state.bundle) {
+            renderBundle(state.bundle);
+          }
+        });
+      }
 
       window.addEventListener("beforeunload", () => {
         disconnectEvents();
       });
 
+      applyLocale();
       setRuntimeStatus();
       if (state.taskId) {
-        addChat("assistant", "Reconnected to existing task: " + state.taskId);
+        addChat("assistant", t("studio.msg.reconnected") + state.taskId);
         refreshTask("restore").then(() => connectEvents());
       } else {
-        addChat("assistant", "Type your goal in Command Chat and click Send to start.");
+        addChat("assistant", t("studio.msg.startPrompt"));
       }
     </script>
   </body>
