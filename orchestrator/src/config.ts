@@ -44,6 +44,75 @@ const defaultVerificationPolicy: VerificationPolicy = {
   autoApplyOnTestPass: true
 };
 
+function parseIntEnv(name: string, fallback: number, min?: number, max?: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return fallback;
+  const intValue = Math.trunc(value);
+  if (typeof min === "number" && intValue < min) return fallback;
+  if (typeof max === "number" && intValue > max) return fallback;
+  return intValue;
+}
+
+function parseNumberEnv(name: string, fallback: number, min?: number, max?: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return fallback;
+  if (typeof min === "number" && value < min) return fallback;
+  if (typeof max === "number" && value > max) return fallback;
+  return value;
+}
+
+function parseBooleanEnv(name: string, fallback: boolean): boolean {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") return true;
+  if (normalized === "false" || normalized === "0") return false;
+  return fallback;
+}
+
+function parseConsensusModeEnv(name: string, fallback: DebatePolicy["consensusMode"]): DebatePolicy["consensusMode"] {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  if (raw === "unanimous" || raw === "quorum" || raw === "judge") return raw;
+  return fallback;
+}
+
+function resolveDebatePolicyDefaults(): DebatePolicy {
+  return {
+    maxDebateRounds: parseIntEnv("AGENT_HUB_MAX_DEBATE_ROUNDS", defaultDebatePolicy.maxDebateRounds, 1, 5),
+    maxRetriesPerStage: parseIntEnv("AGENT_HUB_MAX_RETRIES_PER_STAGE", defaultDebatePolicy.maxRetriesPerStage, 0, 10),
+    consensusMode: parseConsensusModeEnv("AGENT_HUB_CONSENSUS_MODE", defaultDebatePolicy.consensusMode),
+    quorumRatio: parseNumberEnv("AGENT_HUB_QUORUM_RATIO", defaultDebatePolicy.quorumRatio, 0.5, 1),
+    criticalOnlyInFinalRound: parseBooleanEnv(
+      "AGENT_HUB_CRITICAL_ONLY_IN_FINAL_ROUND",
+      defaultDebatePolicy.criticalOnlyInFinalRound
+    )
+  };
+}
+
+function resolveBudgetLimitDefaults(): BudgetLimits {
+  return {
+    maxStageExecutions: parseIntEnv("AGENT_HUB_MAX_STAGE_EXECUTIONS", defaultBudgetLimits.maxStageExecutions, 1, 20),
+    maxModelCallsPerStage: parseIntEnv(
+      "AGENT_HUB_MAX_MODEL_CALLS_PER_STAGE",
+      defaultBudgetLimits.maxModelCallsPerStage,
+      1,
+      200
+    ),
+    maxModelCallsPerTask: parseIntEnv(
+      "AGENT_HUB_MAX_MODEL_CALLS_PER_TASK",
+      defaultBudgetLimits.maxModelCallsPerTask,
+      1,
+      2000
+    ),
+    maxCostUsd: parseNumberEnv("AGENT_HUB_MAX_COST_USD", defaultBudgetLimits.maxCostUsd, 0.01, 1000)
+  };
+}
+
 function parseAgentsFromEnv(): AgentConfig[] {
   const raw = process.env.AGENT_HUB_AGENTS_JSON;
   if (!raw) {
@@ -72,8 +141,8 @@ export interface RuntimeConfig {
   port: number;
   dbPath: string;
   schemaPath: string;
+  settingsPath: string;
   modelTimeoutMs: number;
-  defaultAgents: AgentConfig[];
   defaultDebatePolicy: DebatePolicy;
   defaultBudgetLimits: BudgetLimits;
   defaultProtectionPolicy: ProtectionPolicy;
@@ -106,21 +175,49 @@ export const runtimeConfig: RuntimeConfig = {
   port: Number(process.env.AGENT_HUB_PORT ?? 3939),
   dbPath: process.env.AGENT_HUB_DB_PATH ?? path.resolve(path.dirname(resolvedSchemaPath), "agent_hub.db"),
   schemaPath: resolvedSchemaPath,
+  settingsPath: process.env.AGENT_HUB_SETTINGS_PATH ?? path.resolve(path.dirname(resolvedSchemaPath), "runtime_settings.json"),
   modelTimeoutMs: Number(process.env.AGENT_HUB_MODEL_TIMEOUT_MS ?? 30000),
-  defaultAgents: parseAgentsFromEnv(),
   defaultDebatePolicy,
   defaultBudgetLimits,
   defaultProtectionPolicy,
   defaultVerificationPolicy
 };
 
+export function getDefaultAgents(): AgentConfig[] {
+  try {
+    return parseAgentsFromEnv();
+  } catch {
+    return [
+      {
+        id: "driver-mock",
+        provider: "mock",
+        role: "driver",
+        model: "mock-driver",
+        costPerCallUsd: 0.01
+      },
+      {
+        id: "reviewer-mock",
+        provider: "mock",
+        role: "reviewer",
+        model: "mock-reviewer",
+        costPerCallUsd: 0.01
+      }
+    ];
+  }
+}
+
 export function withDefaultTaskOptions(input: Partial<TaskRequest>): TaskRequest {
+  const configuredDriverAgentId = process.env.AGENT_HUB_DRIVER_AGENT_ID?.trim();
+  const requestDriverAgentId = input.driverAgentId?.trim();
+  const debateDefaults = resolveDebatePolicyDefaults();
+  const budgetDefaults = resolveBudgetLimitDefaults();
   return {
     workspacePath: input.workspacePath ?? "",
     userGoal: input.userGoal ?? "",
-    agents: input.agents?.length ? input.agents : runtimeConfig.defaultAgents,
-    debatePolicy: { ...runtimeConfig.defaultDebatePolicy, ...(input.debatePolicy ?? {}) },
-    budgetLimits: { ...runtimeConfig.defaultBudgetLimits, ...(input.budgetLimits ?? {}) },
+    agents: input.agents?.length ? input.agents : getDefaultAgents(),
+    driverAgentId: requestDriverAgentId || configuredDriverAgentId || undefined,
+    debatePolicy: { ...debateDefaults, ...(input.debatePolicy ?? {}) },
+    budgetLimits: { ...budgetDefaults, ...(input.budgetLimits ?? {}) },
     protectionPolicy: { ...runtimeConfig.defaultProtectionPolicy, ...(input.protectionPolicy ?? {}) },
     verificationPolicy: {
       ...runtimeConfig.defaultVerificationPolicy,

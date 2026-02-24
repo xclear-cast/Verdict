@@ -18,6 +18,7 @@
   ],
   "activationEvents": [
     "onView:multiAgent.sidebar",
+    "onCommand:multiAgent.openStudio",
     "onCommand:multiAgent.startTask",
     "onCommand:multiAgent.approvePatch",
     "onCommand:multiAgent.rejectPatch",
@@ -27,6 +28,10 @@
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "multiAgent.openStudio",
+        "title": "Multi-Agent: Open Studio"
+      },
       {
         "command": "multiAgent.startTask",
         "title": "Multi-Agent: Start Task"

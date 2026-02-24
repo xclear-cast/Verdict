@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentConfig, DebateTurn } from "@agent-hub/shared";
-import { applyBudgetCharge, createInitialBudget, evaluateConsensus } from "../src/engine/policy.js";
+import { applyBudgetCharge, createInitialBudget, evaluateConsensus, selectDriverAgent } from "../src/engine/policy.js";
 
 const agents: AgentConfig[] = [
   { id: "a1", provider: "mock", role: "driver", model: "m1" },
@@ -65,6 +65,18 @@ describe("policy.evaluateConsensus", () => {
       }
     );
     expect(approved.approved).toBe(true);
+  });
+});
+
+describe("policy.selectDriverAgent", () => {
+  it("prefers configured driverAgentId when matched", () => {
+    const selected = selectDriverAgent(agents, "a2");
+    expect(selected.id).toBe("a2");
+  });
+
+  it("falls back to role=driver when configured id is missing", () => {
+    const selected = selectDriverAgent(agents, "missing");
+    expect(selected.id).toBe("a1");
   });
 });
 

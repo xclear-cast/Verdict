@@ -8,7 +8,11 @@ export interface ConsensusResult {
   reviseCount: number;
 }
 
-export function selectDriverAgent(agents: AgentConfig[]): AgentConfig {
+export function selectDriverAgent(agents: AgentConfig[], preferredDriverAgentId?: string): AgentConfig {
+  if (preferredDriverAgentId) {
+    const preferred = agents.find((agent) => agent.id === preferredDriverAgentId);
+    if (preferred) return preferred;
+  }
   const explicitDriver = agents.find((agent) => agent.role === "driver");
   if (explicitDriver) return explicitDriver;
   return agents[0];

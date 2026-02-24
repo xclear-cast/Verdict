@@ -155,6 +155,7 @@ export interface TaskRequest {
   workspacePath: string;
   userGoal: string;
   agents: AgentConfig[];
+  driverAgentId?: string;
   debatePolicy: DebatePolicy;
   budgetLimits: BudgetLimits;
   protectionPolicy: ProtectionPolicy;

@@ -235,7 +235,7 @@ export class TaskRunner {
   }
 
   private async runStage(taskId: string, stage: Stage, request: TaskRequest): Promise<StageRunOutcome> {
-    const driver = selectDriverAgent(request.agents);
+    const driver = selectDriverAgent(request.agents, request.driverAgentId);
 
     for (let attempt = 0; attempt <= request.debatePolicy.maxRetriesPerStage; attempt += 1) {
       this.store.updateTask(taskId, { currentAttempt: attempt });

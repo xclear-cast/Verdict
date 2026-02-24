@@ -146,6 +146,7 @@ export const taskRequestSchema = z.object({
   workspacePath: z.string().min(1),
   userGoal: z.string().min(1),
   agents: z.array(agentConfigSchema).min(2),
+  driverAgentId: z.string().min(1).max(120).optional(),
   debatePolicy: debatePolicySchema,
   budgetLimits: budgetLimitsSchema,
   protectionPolicy: protectionPolicySchema,

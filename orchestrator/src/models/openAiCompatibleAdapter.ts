@@ -5,7 +5,18 @@ function resolveApiKey(agent: AgentConfig): string | undefined {
   if (agent.apiKeyEnv && process.env[agent.apiKeyEnv]) {
     return process.env[agent.apiKeyEnv];
   }
+  if (agent.provider.toLowerCase() === "gemini") {
+    return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
+  }
   return process.env.OPENAI_API_KEY;
+}
+
+function resolveBaseUrl(agent: AgentConfig): string {
+  if (agent.baseUrl) return agent.baseUrl;
+  if (agent.provider.toLowerCase() === "gemini") {
+    return "https://generativelanguage.googleapis.com/v1beta/openai";
+  }
+  return "https://api.openai.com/v1";
 }
 
 function normalizeContent(value: unknown): string {
@@ -37,7 +48,7 @@ export class OpenAiCompatibleAdapter implements ProviderAdapter {
       throw new Error(`API_KEY_MISSING:${agent.id}`);
     }
 
-    const url = `${agent.baseUrl ?? "https://api.openai.com/v1"}/chat/completions`;
+    const url = `${resolveBaseUrl(agent)}/chat/completions`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {

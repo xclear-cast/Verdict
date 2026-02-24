@@ -1,4 +1,4 @@
-# Agent Hub
+﻿# Agent Hub
 
 Provider-agnostic multi-agent debate coding MVP for VS Code.
 
@@ -28,6 +28,7 @@ Provider-agnostic multi-agent debate coding MVP for VS Code.
 
 ## VS Code Commands
 
+- `multiAgent.openStudio`
 - `multiAgent.startTask`
 - `multiAgent.approvePatch`
 - `multiAgent.rejectPatch`
@@ -58,7 +59,7 @@ npm run dev:orchestrator
 npm run build:extension
 ```
 
-5. In VS Code extension host, run command `Multi-Agent: Start Task`.
+5. In VS Code extension host, run command `Multi-Agent: Open Studio`.
 
 ## One-Click Install (VS Code Installed Extension)
 
@@ -79,13 +80,21 @@ This will:
 - install to VS Code via `code --install-extension`
 
 After completion, restart VS Code and run command palette:
-- `Multi-Agent: Start Task`
+- `Multi-Agent: Open Studio`
 
 Or click the left Activity Bar icon:
-- `Multi-Agent` -> click `Start Task`
+- `Multi-Agent` -> click `Open Studio`
+- Studio left pane: type goal like chat and click `Send`
+- Studio right pane: watch live debate + event log
+- Final decision is posted back into left chat and recorded in right event log
+- `Multi-Agent` -> `API Settings` card -> paste keys (`OpenAI`, `Anthropic`, `Gemini`)
+- Optional: set `Writer Agent ID` (for example `driver-openai`) to force patch author selection
+- `Debate & Budget Settings` lets you set rounds/retries/consensus/cost limits (`?` popup help)
+- Click `Save API Keys`
 
 ## Notes
 
 - If no provider keys are configured, use `mock` agents in `AGENT_HUB_AGENTS_JSON`.
+- `Writer Agent ID` can also be preconfigured with `AGENT_HUB_DRIVER_AGENT_ID`.
 - Debate final round applies `critical bugs only` behavior.
 - `unifiedDiff` is stored for audit; actual edits apply through edit operations with fuzzy replace fallback.

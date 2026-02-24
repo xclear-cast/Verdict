@@ -1,9 +1,10 @@
-# Multi-Agent Debate
+﻿# Multi-Agent Debate
 
 Provider-agnostic multi-agent debate coding assistant for VS Code.
 
 ## Commands
 
+- `Multi-Agent: Open Studio`
 - `Multi-Agent: Start Task`
 - `Multi-Agent: Approve Patch`
 - `Multi-Agent: Reject Patch`
@@ -17,4 +18,11 @@ Provider-agnostic multi-agent debate coding assistant for VS Code.
 ## Click Workflow
 
 - Click left Activity Bar icon: `Multi-Agent`
-- Use sidebar buttons: `Start Task`, `Show Log`, `Approve`, `Reject`, `Retry`
+- Click `Open Studio` for split UI:
+  - left: chat-style goal input + final decision messages
+  - right: live debate turns + event log
+- Sidebar is minimal: open Studio and manage API/Writer settings
+- In `API Settings`, paste keys (`OpenAI`, `Anthropic`, `Gemini`)
+- Optional: set `Writer Agent ID` to choose the patch-writing agent explicitly
+- `Debate & Budget Settings` lets you set rounds/retries/consensus/cost limits with `?` popup help
+- Click `Save API Keys`
