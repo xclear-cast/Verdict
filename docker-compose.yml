@@ -1,0 +1,21 @@
+services:
+  orchestrator:
+    container_name: agent-hub-orchestrator
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3939:3939"
+    env_file:
+      - .env
+    environment:
+      AGENT_HUB_PORT: 3939
+      AGENT_HUB_SCHEMA_PATH: /app/data/schema.sql
+      AGENT_HUB_DB_PATH: /app/runtime-data/agent_hub.db
+      AGENT_HUB_SETTINGS_PATH: /app/runtime-data/runtime_settings.json
+    volumes:
+      - agent_hub_runtime_data:/app/runtime-data
+    restart: unless-stopped
+
+volumes:
+  agent_hub_runtime_data:

@@ -35,7 +35,41 @@ Provider-agnostic multi-agent debate coding MVP for VS Code.
 - `multiAgent.retryStep`
 - `multiAgent.showDebateLog`
 
-## Quick Start
+## Docker Quick Start (Recommended)
+
+1. Copy `.env.example` to `.env` and fill API keys.
+
+2. Start orchestrator:
+
+```bash
+docker compose up -d --build
+```
+
+3. Check health:
+
+```bash
+curl http://127.0.0.1:3939/health
+```
+
+4. Stop container:
+
+```bash
+docker compose down
+```
+
+Useful helper scripts:
+
+```bash
+npm run docker:up
+npm run docker:logs
+npm run docker:down
+```
+
+Notes:
+- SQLite DB and runtime settings persist in Docker volume `agent_hub_runtime_data`.
+- Container port `3939` is mapped to host `3939` for VS Code extension.
+
+## Local Quick Start
 
 1. Install deps:
 

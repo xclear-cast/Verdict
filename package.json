@@ -11,6 +11,9 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test -w orchestrator",
     "dev:orchestrator": "npm run dev -w orchestrator",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f orchestrator",
     "build:extension": "npm run build -w vscode-extension",
     "package:extension": "npm run package:vsix -w vscode-extension",
     "install:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/install-extension.ps1"
